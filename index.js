@@ -6,6 +6,12 @@ var _child_process = require('child_process');
 
 var _events = require('events');
 
+var _portfinder = require('portfinder');
+
+var _portfinder2 = _interopRequireDefault(_portfinder);
+
+function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -30,6 +36,11 @@ var AutoSSH = function (_EventEmitter) {
     _this.remotePort = conf.remotePort;
     _this.localPort = conf.localPort;
 
+    _portfinder2.default.basePort = _this.localPort;
+    _portfinder2.default.getPort({ port: _this.localPort }, function (err, result) {
+      console.log('Error: ', err);
+      console.log('result: ', result);
+    });
     setImmediate(function () {
       if (!conf.host) return _this.emit('error', 'Missing host');
       if (!conf.username) return _this.emit('error', 'Missing username');
@@ -37,7 +48,7 @@ var AutoSSH = function (_EventEmitter) {
       if (!conf.localPort) return _this.emit('error', 'Missing localPort');
 
       _this.execTunnel();
-      _this.emit('init', { kill: _this.kill, pid: _this.currentProcess.pid });
+      _this.emit('init', { kill: _this.kill, pid: _this.currentProcess.pid, currentProcess: _this.currentProcess });
     });
 
     process.on('exit', function () {

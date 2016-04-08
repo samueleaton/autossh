@@ -1,5 +1,6 @@
 import { exec } from 'child_process';
 import { EventEmitter } from 'events';
+import portfinder from 'portfinder';
 
 /* AutoSSH class
 */
@@ -12,19 +13,36 @@ class AutoSSH extends EventEmitter {
     this.remotePort = conf.remotePort;
     this.localPort = conf.localPort;
 
-    setImmediate(() => {
-      if (!conf.host)
-        return this.emit('error', 'Missing host');
-      if (!conf.username)
-        return this.emit('error', 'Missing username');
-      if (!conf.remotePort)
-        return this.emit('error', 'Missing remotePort');
-      if (!conf.localPort)
-        return this.emit('error', 'Missing localPort');
+    portfinder.getPort({port: this.localPort === 'auto' ? 8000 : this.localPort}, (err, freePort) => {
+      console.log('Error: ', err);
+      if (this.localPort !== 'auto' && this.localPort !== freePort) {
+        return console.error(`Port ${this.localPort} is not available`);
+      }
+      this.localPort = result;
 
-      this.execTunnel();
-      this.emit('init', {kill: this.kill, pid: this.currentProcess.pid});
+      setImmediate(() => {
+        if (!conf.host)
+          return this.emit('error', 'Missing host');
+        if (!conf.username)
+          return this.emit('error', 'Missing username');
+        if (!conf.remotePort)
+          return this.emit('error', 'Missing remotePort');
+        if (!conf.localPort)
+          return this.emit('error', 'Missing localPort');
+
+        this.execTunnel();
+
+        this.emit('init', {
+          kill: this.kill,
+          pid: this.currentProcess.pid,
+          host: this.host,
+          username: this.username,
+          remotePort: this.remotePort,
+          localPort: this.localPort,
+        });
+      });
     });
+    
 
     process.on('exit', () => {
       this.kill();
