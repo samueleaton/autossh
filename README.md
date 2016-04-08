@@ -44,7 +44,7 @@ If you want to dynamically/randomly generate a port number, provide a string `au
 
 Port conflicts will automatically be avoided and the generated port will not be in use.
 
-See `demo.js` for ean example.
+See `demo.js` for an example.
 
 #### Killing the Autossh Process
 
