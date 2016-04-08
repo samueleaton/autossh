@@ -7,7 +7,7 @@ for (let i = 0; i < 5; i++) {
   // set up config
   autossh({
     host: '104.131.150.215', // enter host address
-    username: 'same', // enter username
+    username: 'root', // enter username
     localPort: 'auto', // 'auto' or port number
     remotePort: 5432
   })
@@ -30,25 +30,25 @@ for (let i = 0; i < 5; i++) {
 **connected**
 localPort:  39570
 pid:        7477
-tunnel established from localhost:39570 to xyz.xy.xyz.yz:5432 as same
+tunnel established from localhost:39570 to xyz.xy.xyz.yz:5432 as root
 
 **connected**
 localPort:  53139
 pid:        7478
-tunnel established from localhost:53139 to xyz.xy.xyz.yz:5432 as same
+tunnel established from localhost:53139 to xyz.xy.xyz.yz:5432 as root
 
 **connected**
 localPort:  56421
 pid:        7479
-tunnel established from localhost:56421 to xyz.xy.xyz.yz:5432 as same
+tunnel established from localhost:56421 to xyz.xy.xyz.yz:5432 as root
 
 **connected**
 localPort:  5360
 pid:        7480
-tunnel established from localhost:5360 to xyz.xy.xyz.yz:5432 as same
+tunnel established from localhost:5360 to xyz.xy.xyz.yz:5432 as root
 
 **connected**
 localPort:  40321
 pid:        7481
-tunnel established from localhost:40321 to xyz.xy.xyz.yz:5432 as same
+tunnel established from localhost:40321 to xyz.xy.xyz.yz:5432 as root
 */
