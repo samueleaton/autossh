@@ -42,7 +42,7 @@ class AutoSSH extends EventEmitter {
         this.kill();
         return this.emit('error', stderr);
       }
-      
+
       if (err)
         this.emit('error', err);
 
