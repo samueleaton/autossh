@@ -11,7 +11,7 @@ autossh({
 .on('error', err => {
   console.error('ERROR: ', err);
 })
-.on('init', () => {
+.on('init', connection => {
   console.log('connected.');
 });
 
