@@ -35,7 +35,7 @@ autossh({
 ...is equivalent to...
 
 ``` bash
-ssh -NL 64444:localhost:5432 root@111.22.333.444
+ssh -NL 64444:localhost:5432 -o "ExitOnForwardFailure yes" root@111.22.333.444
 ```
 
 #### Generate Dynamic Local Port
