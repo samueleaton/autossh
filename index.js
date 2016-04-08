@@ -12,16 +12,18 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
-var SshTunnel = function (_EventEmitter) {
-  _inherits(SshTunnel, _EventEmitter);
+/* AutoSSH class
+*/
 
-  function SshTunnel() {
+var AutoSSH = function (_EventEmitter) {
+  _inherits(AutoSSH, _EventEmitter);
+
+  function AutoSSH() {
     var conf = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
-    var cb = arguments[1];
 
-    _classCallCheck(this, SshTunnel);
+    _classCallCheck(this, AutoSSH);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(SshTunnel).call(this));
+    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AutoSSH).call(this));
 
     _this.host = conf.host;
     _this.username = conf.username;
@@ -35,31 +37,37 @@ var SshTunnel = function (_EventEmitter) {
       if (!conf.localPort) return _this.emit('error', 'Missing localPort');
 
       _this.execTunnel();
-      _this.emit('init');
-      process.on('exit', function () {
-        _this.kill();
-      });
+      _this.emit('init', { kill: _this.kill, pid: _this.currentProcess.pid });
+    });
+
+    process.on('exit', function () {
+      _this.kill();
     });
     return _this;
   }
 
-  _createClass(SshTunnel, [{
+  _createClass(AutoSSH, [{
     key: 'execTunnel',
     value: function execTunnel() {
       var _this2 = this;
 
-      var host = this.host;
-      var username = this.username;
-      var localPort = this.localPort;
-      var remotePort = this.remotePort;
-      this.currentProcess = (0, _child_process.exec)('ssh -NL ' + localPort + ':localhost:' + remotePort + ' ' + username + '@' + host, function (err, stdout, stderr) {
-        console.log('\nerr:', err);
-        console.log('\nstdout:', stdout);
-        console.log('\nstderr:', stderr);
+      var bindAddress = this.localPort + ':localhost:' + this.remotePort;
+      var userAtHost = this.username + '@' + this.host;
+      var exitOnFailure = '-o "ExitOnForwardFailure yes"';
+      var execString = 'ssh -NL ' + bindAddress + ' ' + exitOnFailure + ' ' + userAtHost;
+      console.log('execString: ', execString);
+      this.currentProcess = (0, _child_process.exec)(execString, function (err, stdout, stderr) {
+        if (/Address already in use/i.test(stderr)) {
+          _this2.kill();
+          return _this2.emit('error', stderr);
+        }
 
         if (err) _this2.emit('error', err);
 
-        if (!_this2.killed) _this2.execTunnel();
+        if (!_this2.killed) {
+          console.log('Restarting autossh...');
+          _this2.execTunnel();
+        }
       });
     }
   }, {
@@ -71,11 +79,31 @@ var SshTunnel = function (_EventEmitter) {
     }
   }]);
 
-  return SshTunnel;
+  return AutoSSH;
 }(_events.EventEmitter);
 
-function autoSSH(conf, cb) {
-  return new SshTunnel(conf, cb);
+function autoSSH(conf) {
+  var newAutoSSH = new AutoSSH(conf);
+  var returnObj = {
+    on: function on(evt) {
+      for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
+        args[_key - 1] = arguments[_key];
+      }
+
+      newAutoSSH.on.apply(newAutoSSH, [evt].concat(args));
+      return this;
+    },
+    kill: function kill() {
+      newAutoSSH.kill();
+      return this;
+    }
+  };
+  Object.defineProperty(returnObj, 'pid', {
+    get: function get() {
+      return newAutoSSH.currentProcess.pid;
+    }
+  });
+  return returnObj;
 }
 
 module.exports = autoSSH;

@@ -1,9 +1,12 @@
 import { exec } from 'child_process';
 import { EventEmitter } from 'events';
 
-class SshTunnel extends EventEmitter {
-  constructor(conf = {}, cb) {
+/* AutoSSH class
+*/
+class AutoSSH extends EventEmitter {
+  constructor(conf = {}) {
     super();
+
     this.host = conf.host;
     this.username = conf.username;
     this.remotePort = conf.remotePort;
@@ -20,30 +23,34 @@ class SshTunnel extends EventEmitter {
         return this.emit('error', 'Missing localPort');
 
       this.execTunnel();
-      this.emit('init');
-      process.on('exit', () => {
-        this.kill();
-      });
+      this.emit('init', {kill: this.kill, pid: this.currentProcess.pid});
+    });
+
+    process.on('exit', () => {
+      this.kill();
     });
   }
 
   execTunnel() {
-    const host = this.host;
-    const username = this.username;
-    const localPort = this.localPort;
-    const remotePort = this.remotePort;
-    this.currentProcess = exec(`ssh -NL ${localPort}:localhost:${remotePort} ${username}@${host}`,
-      (err, stdout, stderr) => {
-        console.log('\nerr:', err);
-        console.log('\nstdout:', stdout);
-        console.log('\nstderr:', stderr);
-
-        if (err) this.emit('error', err);
-
-        if (!this.killed)
-          this.execTunnel();
+    const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
+    const userAtHost = `${this.username}@${this.host}`;
+    const exitOnFailure = '-o "ExitOnForwardFailure yes"'
+    const execString = `ssh -NL ${bindAddress} ${exitOnFailure} ${userAtHost}`;
+    console.log('execString: ', execString);
+    this.currentProcess = exec(execString, (err, stdout, stderr) => {
+      if (/Address already in use/i.test(stderr)) {
+        this.kill();
+        return this.emit('error', stderr);
       }
-    );
+      
+      if (err)
+        this.emit('error', err);
+
+      if (!this.killed) {
+        console.log('Restarting autossh...');
+        this.execTunnel();
+      }
+    });
   }
 
   kill() {
@@ -53,8 +60,22 @@ class SshTunnel extends EventEmitter {
   }
 }
 
-function autoSSH(conf, cb) {
-  return new SshTunnel(conf, cb);
+function autoSSH(conf) {
+  const newAutoSSH = new AutoSSH(conf);
+  const returnObj = {
+    on(evt, ...args) {
+      newAutoSSH.on(evt, ...args);
+      return this;
+    },
+    kill() {
+      newAutoSSH.kill();
+      return this;
+    }
+  };
+  Object.defineProperty(returnObj, 'pid', {
+    get: () => newAutoSSH.currentProcess.pid
+  });
+  return returnObj;
 }
 
 module.exports = autoSSH;
