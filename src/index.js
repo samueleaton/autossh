@@ -13,48 +13,55 @@ class AutoSSH extends EventEmitter {
     this.remotePort = conf.remotePort;
     this.localPort = conf.localPort;
 
-    portfinder.getPort({port: this.localPort === 'auto' ? 8000 : this.localPort}, (err, freePort) => {
-      console.log('Error: ', err);
-      if (this.localPort !== 'auto' && this.localPort !== freePort) {
-        return console.error(`Port ${this.localPort} is not available`);
-      }
-      this.localPort = result;
 
-      setImmediate(() => {
+    setImmediate(() => {
+      if (!conf.localPort)
+        return this.emit('error', 'Missing localPort');
+
+      portfinder.getPort({
+        port: this.localPort === 'auto' ? this.generateRandomPort() : this.localPort
+      }, (err, freePort) => {
+        if (err)
+          return this.emit('error', 'Port error: ' + err);
+        if (this.localPort !== 'auto' && this.localPort !== freePort)
+          return this.emit('error', `Port ${this.localPort} is not available`);
         if (!conf.host)
           return this.emit('error', 'Missing host');
         if (!conf.username)
           return this.emit('error', 'Missing username');
         if (!conf.remotePort)
           return this.emit('error', 'Missing remotePort');
-        if (!conf.localPort)
-          return this.emit('error', 'Missing localPort');
+
+        this.localPort = freePort;
 
         this.execTunnel();
 
-        this.emit('init', {
+        this.emit('connect', {
           kill: this.kill,
           pid: this.currentProcess.pid,
           host: this.host,
           username: this.username,
           remotePort: this.remotePort,
-          localPort: this.localPort,
+          localPort: this.localPort
         });
       });
     });
-    
 
     process.on('exit', () => {
       this.kill();
     });
   }
-
+  generateRandomPort() {
+    const minPort = 3000;
+    const maxPort = 65535;
+    return Math.floor(Math.random() * (maxPort - minPort + 1)) + minPort;
+  }
   execTunnel() {
     const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
     const userAtHost = `${this.username}@${this.host}`;
     const exitOnFailure = '-o "ExitOnForwardFailure yes"'
     const execString = `ssh -NL ${bindAddress} ${exitOnFailure} ${userAtHost}`;
-    console.log('execString: ', execString);
+
     this.currentProcess = exec(execString, (err, stdout, stderr) => {
       if (/Address already in use/i.test(stderr)) {
         this.kill();

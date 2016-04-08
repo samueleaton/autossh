@@ -36,19 +36,31 @@ var AutoSSH = function (_EventEmitter) {
     _this.remotePort = conf.remotePort;
     _this.localPort = conf.localPort;
 
-    _portfinder2.default.basePort = _this.localPort;
-    _portfinder2.default.getPort({ port: _this.localPort }, function (err, result) {
-      console.log('Error: ', err);
-      console.log('result: ', result);
-    });
     setImmediate(function () {
-      if (!conf.host) return _this.emit('error', 'Missing host');
-      if (!conf.username) return _this.emit('error', 'Missing username');
-      if (!conf.remotePort) return _this.emit('error', 'Missing remotePort');
       if (!conf.localPort) return _this.emit('error', 'Missing localPort');
 
-      _this.execTunnel();
-      _this.emit('init', { kill: _this.kill, pid: _this.currentProcess.pid, currentProcess: _this.currentProcess });
+      _portfinder2.default.getPort({
+        port: _this.localPort === 'auto' ? _this.generateRandomPort() : _this.localPort
+      }, function (err, freePort) {
+        if (err) return _this.emit('error', 'Port error: ' + err);
+        if (_this.localPort !== 'auto' && _this.localPort !== freePort) return _this.emit('error', 'Port ' + _this.localPort + ' is not available');
+        if (!conf.host) return _this.emit('error', 'Missing host');
+        if (!conf.username) return _this.emit('error', 'Missing username');
+        if (!conf.remotePort) return _this.emit('error', 'Missing remotePort');
+
+        _this.localPort = freePort;
+
+        _this.execTunnel();
+
+        _this.emit('connect', {
+          kill: _this.kill,
+          pid: _this.currentProcess.pid,
+          host: _this.host,
+          username: _this.username,
+          remotePort: _this.remotePort,
+          localPort: _this.localPort
+        });
+      });
     });
 
     process.on('exit', function () {
@@ -58,6 +70,13 @@ var AutoSSH = function (_EventEmitter) {
   }
 
   _createClass(AutoSSH, [{
+    key: 'generateRandomPort',
+    value: function generateRandomPort() {
+      var minPort = 3000;
+      var maxPort = 65535;
+      return Math.floor(Math.random() * (maxPort - minPort + 1)) + minPort;
+    }
+  }, {
     key: 'execTunnel',
     value: function execTunnel() {
       var _this2 = this;
@@ -66,7 +85,7 @@ var AutoSSH = function (_EventEmitter) {
       var userAtHost = this.username + '@' + this.host;
       var exitOnFailure = '-o "ExitOnForwardFailure yes"';
       var execString = 'ssh -NL ' + bindAddress + ' ' + exitOnFailure + ' ' + userAtHost;
-      console.log('execString: ', execString);
+
       this.currentProcess = (0, _child_process.exec)(execString, function (err, stdout, stderr) {
         if (/Address already in use/i.test(stderr)) {
           _this2.kill();
