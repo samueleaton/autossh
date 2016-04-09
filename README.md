@@ -22,13 +22,6 @@ autossh({
   username: 'root',
   localPort: 64444,
   remotePort: 5432
-})
-.on('error', err => {
-  console.error('ERROR: ', err);
-})
-.on('connect', connection => {
-  console.log('connected. Tunnel established on port ' + connection.localPort);
-  console.log('pid: ' + connection.pid);
 });
 ```
 
@@ -36,6 +29,34 @@ autossh({
 
 ``` bash
 ssh -NL 64444:localhost:5432 -o "ExitOnForwardFailure yes" root@111.22.333.444
+```
+
+#### Event Listeners
+
+Autossh inherits from node.js's EventEmitter, and implements two events: `error`, `connect`
+
+**error**
+
+The `error` event will fire anytime there is an error throughout the life of the `autossh` process.
+
+**connect**
+
+The `connect` event will fire only once when the initial ssh connection is made
+
+``` javascript
+autossh({
+  host: '111.22.333.444',
+  username: 'root',
+  localPort: 64444,
+  remotePort: 5432
+})
+.on('error', err => {
+  console.error('ERROR: ', err);
+})
+.on('connect', connection => {
+  console.log('Tunnel established on port ' + connection.localPort);
+  console.log('pid: ' + connection.pid);
+});
 ```
 
 #### Generate Dynamic Local Port
