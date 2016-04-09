@@ -1,5 +1,7 @@
 'use strict';
 
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
 var _child_process = require('child_process');
@@ -32,33 +34,34 @@ var AutoSSH = function (_EventEmitter) {
     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AutoSSH).call(this));
 
     _this.host = conf.host;
-    _this.username = conf.username;
+    _this.username = conf.username || 'root';
     _this.remotePort = conf.remotePort;
-    _this.localPort = conf.localPort;
+    _this.localPort = conf.localPort || 'auto';
 
     setImmediate(function () {
-      if (!conf.localPort) return _this.emit('error', 'Missing localPort');
+      var confErrors = _this.getConfErrors(conf);
 
-      _portfinder2.default.getPort({
-        port: _this.localPort === 'auto' ? _this.generateRandomPort() : _this.localPort
-      }, function (err, freePort) {
+      if (confErrors.length) return confErrors.forEach(function (err) {
+        return _this.emit('error', err);
+      });
+
+      var port = _this.localPort === 'auto' ? _this.generateRandomPort() : _this.localPort;
+      console.log('checkpoint 1');
+      _portfinder2.default.getPort({ port: port }, function (err, freePort) {
         if (err) return _this.emit('error', 'Port error: ' + err);
         if (_this.localPort !== 'auto' && _this.localPort !== freePort) return _this.emit('error', 'Port ' + _this.localPort + ' is not available');
-        if (!conf.host) return _this.emit('error', 'Missing host');
-        if (!conf.username) return _this.emit('error', 'Missing username');
-        if (!conf.remotePort) return _this.emit('error', 'Missing remotePort');
 
         _this.localPort = freePort;
 
-        _this.execTunnel();
-
-        _this.emit('connect', {
-          kill: _this.kill,
-          pid: _this.currentProcess.pid,
-          host: _this.host,
-          username: _this.username,
-          remotePort: _this.remotePort,
-          localPort: _this.localPort
+        _this.execTunnel(function () {
+          _this.emit('connect', {
+            kill: _this.kill,
+            pid: _this.currentProcess.pid,
+            host: _this.host,
+            username: _this.username,
+            remotePort: _this.remotePort,
+            localPort: _this.localPort
+          });
         });
       });
     });
@@ -70,6 +73,20 @@ var AutoSSH = function (_EventEmitter) {
   }
 
   _createClass(AutoSSH, [{
+    key: 'getConfErrors',
+    value: function getConfErrors(conf) {
+      var errors = [];
+      if (!conf.localPort) errors.push('Missing localPort');else if (typeof conf.localPort !== 'number' && conf.localPort !== 'auto') errors.push('Invalid localPort');
+
+      if (!conf.host) errors.push('Missing host');else if (typeof conf.host !== 'string') errors.push('host must be type "string". was given ' + _typeof(conf.host));
+
+      if (!conf.username) errors.push('Missing username');else if (typeof conf.username !== 'string') errors.push('username must be type "string". was given ' + _typeof(conf.username));
+
+      if (!conf.remotePort) errors.push('Missing remotePort');else if (typeof conf.remotePort !== 'number') errors.push('remotePort must be type "number". was given ' + _typeof(conf.remotePort));
+
+      return errors;
+    }
+  }, {
     key: 'generateRandomPort',
     value: function generateRandomPort() {
       var minPort = 3000;
@@ -77,16 +94,19 @@ var AutoSSH = function (_EventEmitter) {
       return Math.floor(Math.random() * (maxPort - minPort + 1)) + minPort;
     }
   }, {
-    key: 'execTunnel',
-    value: function execTunnel() {
-      var _this2 = this;
-
+    key: 'generateExecString',
+    value: function generateExecString() {
       var bindAddress = this.localPort + ':localhost:' + this.remotePort;
       var userAtHost = this.username + '@' + this.host;
       var exitOnFailure = '-o "ExitOnForwardFailure yes"';
-      var execString = 'ssh -NL ' + bindAddress + ' ' + exitOnFailure + ' ' + userAtHost;
+      return 'ssh -NL ' + bindAddress + ' ' + exitOnFailure + ' ' + userAtHost;
+    }
+  }, {
+    key: 'execTunnel',
+    value: function execTunnel(cb) {
+      var _this2 = this;
 
-      this.currentProcess = (0, _child_process.exec)(execString, function (err, stdout, stderr) {
+      this.currentProcess = (0, _child_process.exec)(this.generateExecString(), function (err, stdout, stderr) {
         if (/Address already in use/i.test(stderr)) {
           _this2.kill();
           return _this2.emit('error', stderr);
@@ -94,17 +114,20 @@ var AutoSSH = function (_EventEmitter) {
 
         if (err) _this2.emit('error', err);
 
-        if (!_this2.killed) {
-          console.log('Restarting autossh...');
-          _this2.execTunnel();
-        }
+        if (!_this2.killed) _this2.execTunnel(function () {
+          return console.log('Restarting autossh...');
+        });
+      });
+
+      if (typeof cb === 'function') setImmediate(function () {
+        return cb();
       });
     }
   }, {
     key: 'kill',
     value: function kill() {
       this.killed = true;
-      this.currentProcess.kill();
+      if (this.currentProcess && typeof this.currentProcess.kill === 'function') this.currentProcess.kill();
       return this;
     }
   }]);
@@ -112,28 +135,32 @@ var AutoSSH = function (_EventEmitter) {
   return AutoSSH;
 }(_events.EventEmitter);
 
-function autoSSH(conf) {
-  var newAutoSSH = new AutoSSH(conf);
-  var returnObj = {
+module.exports = function (conf) {
+  var autossh = new AutoSSH(conf);
+
+  /* Create interface object
+      A new object creates an abstraction from class implementation
+  */
+  var autosshInterface = {
     on: function on(evt) {
       for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {
         args[_key - 1] = arguments[_key];
       }
 
-      newAutoSSH.on.apply(newAutoSSH, [evt].concat(args));
+      autossh.on.apply(autossh, [evt].concat(args));
       return this;
     },
     kill: function kill() {
-      newAutoSSH.kill();
+      autossh.kill();
       return this;
     }
   };
-  Object.defineProperty(returnObj, 'pid', {
+
+  Object.defineProperty(autosshInterface, 'pid', {
     get: function get() {
-      return newAutoSSH.currentProcess.pid;
+      return autossh.currentProcess.pid;
     }
   });
-  return returnObj;
-}
 
-module.exports = autoSSH;
+  return autosshInterface;
+};

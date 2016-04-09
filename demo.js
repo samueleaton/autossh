@@ -6,8 +6,8 @@ for (let i = 0; i < 5; i++) {
 
   // set up config
   autossh({
-    host: '104.131.150.215', // enter host address
-    username: 'root', // enter username
+    host: 'xyz.xy.xyz.yz', // enter host address
+    username: 'same', // enter username
     localPort: 'auto', // 'auto' or port number
     remotePort: 5432
   })
