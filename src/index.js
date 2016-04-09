@@ -146,6 +146,9 @@ class AutoSSH extends EventEmitter {
   }
 }
 
+
+/* Export
+*/
 module.exports = function (conf) {
   const autossh = new AutoSSH(conf);
   
