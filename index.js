@@ -38,9 +38,9 @@ var AutoSSH = function (_EventEmitter) {
     _this.remotePort = conf.remotePort;
     _this.localPort = conf.localPort || 'auto';
 
-    _this.debounceCount = 0;
-    _this.maxDebounceCount = 25;
-    _this.debounceTimeout = 50;
+    _this.pollCount = 0;
+    _this.maxPollCount = 25;
+    _this.pollTimeout = 50;
 
     setImmediate(function () {
       var confErrors = _this.getConfErrors(conf);
@@ -58,7 +58,7 @@ var AutoSSH = function (_EventEmitter) {
         _this.localPort = freePort;
 
         _this.execTunnel(function () {
-          _this.debounceConnection(function () {
+          _this.pollConnection(function () {
             _this.emit('connect', {
               kill: _this.kill,
               pid: _this.currentProcess.pid,
@@ -79,22 +79,21 @@ var AutoSSH = function (_EventEmitter) {
   }
 
   _createClass(AutoSSH, [{
-    key: 'debounceConnection',
-    value: function debounceConnection(cb) {
+    key: 'pollConnection',
+    value: function pollConnection(cb) {
       var _this2 = this;
 
-      if (this.debounceCount >= this.maxDebounceCount) {
-        this.emit('error', 'Max debounce count reached. Aborting...');
+      if (this.pollCount >= this.maxPollCount) {
+        this.emit('error', 'Max poll count reached. Aborting...');
         return this.kill();
       }
 
       this.isConnectionEstablished(function (result) {
         if (result) return cb();
-        console.log('Not Ready... Debounce!!!');
         setTimeout(function () {
-          _this2.debounceCount++;
-          _this2.debounceConnection(cb);
-        }, _this2.debounceTimeout);
+          _this2.pollCount++;
+          _this2.pollConnection(cb);
+        }, _this2.pollTimeout);
       });
     }
   }, {
@@ -170,6 +169,10 @@ var AutoSSH = function (_EventEmitter) {
 
   return AutoSSH;
 }(_events.EventEmitter);
+
+/* Export
+*/
+
 
 module.exports = function (conf) {
   var autossh = new AutoSSH(conf);
