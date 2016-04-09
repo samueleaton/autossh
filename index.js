@@ -38,6 +38,10 @@ var AutoSSH = function (_EventEmitter) {
     _this.remotePort = conf.remotePort;
     _this.localPort = conf.localPort || 'auto';
 
+    _this.debounceCount = 0;
+    _this.maxDebounceCount = 25;
+    _this.debounceTimeout = 50;
+
     setImmediate(function () {
       var confErrors = _this.getConfErrors(conf);
 
@@ -54,13 +58,15 @@ var AutoSSH = function (_EventEmitter) {
         _this.localPort = freePort;
 
         _this.execTunnel(function () {
-          _this.emit('connect', {
-            kill: _this.kill,
-            pid: _this.currentProcess.pid,
-            host: _this.host,
-            username: _this.username,
-            remotePort: _this.remotePort,
-            localPort: _this.localPort
+          _this.debounceConnection(function () {
+            _this.emit('connect', {
+              kill: _this.kill,
+              pid: _this.currentProcess.pid,
+              host: _this.host,
+              username: _this.username,
+              remotePort: _this.remotePort,
+              localPort: _this.localPort
+            });
           });
         });
       });
@@ -73,6 +79,36 @@ var AutoSSH = function (_EventEmitter) {
   }
 
   _createClass(AutoSSH, [{
+    key: 'debounceConnection',
+    value: function debounceConnection(cb) {
+      var _this2 = this;
+
+      if (this.debounceCount >= this.maxDebounceCount) {
+        this.emit('error', 'Max debounce count reached. Aborting...');
+        return this.kill();
+      }
+
+      this.isConnectionEstablished(function (result) {
+        if (result) return cb();
+        console.log('Not Ready... Debounce!!!');
+        setTimeout(function () {
+          _this2.debounceCount++;
+          _this2.debounceConnection(cb);
+        }, _this2.debounceTimeout);
+      });
+    }
+  }, {
+    key: 'isConnectionEstablished',
+    value: function isConnectionEstablished(cb) {
+      var _this3 = this;
+
+      _portfinder2.default.getPort({ port: this.localPort }, function (err, freePort) {
+        if (err) return cb(false);
+
+        if (_this3.localPort === freePort) return cb(false);else return cb(true);
+      });
+    }
+  }, {
     key: 'getConfErrors',
     value: function getConfErrors(conf) {
       var errors = [];
@@ -104,17 +140,17 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'execTunnel',
     value: function execTunnel(cb) {
-      var _this2 = this;
+      var _this4 = this;
 
       this.currentProcess = (0, _child_process.exec)(this.generateExecString(), function (err, stdout, stderr) {
         if (/Address already in use/i.test(stderr)) {
-          _this2.kill();
-          return _this2.emit('error', stderr);
+          _this4.kill();
+          return _this4.emit('error', stderr);
         }
 
-        if (err) _this2.emit('error', err);
+        if (err) _this4.emit('error', err);
 
-        if (!_this2.killed) _this2.execTunnel(function () {
+        if (!_this4.killed) _this4.execTunnel(function () {
           return console.log('Restarting autossh...');
         });
       });

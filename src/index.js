@@ -12,6 +12,10 @@ class AutoSSH extends EventEmitter {
     this.username = conf.username || 'root';
     this.remotePort = conf.remotePort;
     this.localPort = conf.localPort || 'auto';
+    
+    this.pollCount = 0;
+    this.maxPollCount = 25;
+    this.pollTimeout = 50;
 
     setImmediate(() => {
       const confErrors = this.getConfErrors(conf);
@@ -30,21 +34,51 @@ class AutoSSH extends EventEmitter {
         this.localPort = freePort;
 
         this.execTunnel(() => {
-          this.emit('connect', {
-            kill: this.kill,
-            pid: this.currentProcess.pid,
-            host: this.host,
-            username: this.username,
-            remotePort: this.remotePort,
-            localPort: this.localPort
+          this.debounceConnection(() => {
+            this.emit('connect', {
+              kill: this.kill,
+              pid: this.currentProcess.pid,
+              host: this.host,
+              username: this.username,
+              remotePort: this.remotePort,
+              localPort: this.localPort
+            });
           });
         });
-
       });
     });
 
     process.on('exit', () => {
       this.kill();
+    });
+  }
+
+  debounceConnection(cb) {
+    if (this.pollCount >= this.maxPollCount) {
+      this.emit('error', 'Max debounce count reached. Aborting...');
+      return this.kill();
+    }
+
+    this.isConnectionEstablished(result => {
+      if (result)
+        return cb();
+      console.log('Not Ready... Debounce!!!');
+      setTimeout(() => {
+        this.pollCount++;
+        this.debounceConnection(cb);
+      }, this.pollTimeout);
+    });
+  }
+
+  isConnectionEstablished(cb) {
+    portfinder.getPort({ port: this.localPort }, (err, freePort) => {
+      if (err)
+        return cb(false);
+      
+      if (this.localPort === freePort)
+        return cb(false);
+      else
+        return cb(true);
     });
   }
 
