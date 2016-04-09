@@ -34,7 +34,7 @@ class AutoSSH extends EventEmitter {
         this.localPort = freePort;
 
         this.execTunnel(() => {
-          this.debounceConnection(() => {
+          this.pollConnection(() => {
             this.emit('connect', {
               kill: this.kill,
               pid: this.currentProcess.pid,
@@ -53,19 +53,18 @@ class AutoSSH extends EventEmitter {
     });
   }
 
-  debounceConnection(cb) {
+  pollConnection(cb) {
     if (this.pollCount >= this.maxPollCount) {
-      this.emit('error', 'Max debounce count reached. Aborting...');
+      this.emit('error', 'Max poll count reached. Aborting...');
       return this.kill();
     }
 
     this.isConnectionEstablished(result => {
       if (result)
         return cb();
-      console.log('Not Ready... Debounce!!!');
       setTimeout(() => {
         this.pollCount++;
-        this.debounceConnection(cb);
+        this.pollConnection(cb);
       }, this.pollTimeout);
     });
   }
