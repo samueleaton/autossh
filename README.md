@@ -1,6 +1,6 @@
 # autossh
 
-Persistent SSH tunnels
+Persistent SSH tunnels for Node.js
 
 ### Install
 
@@ -92,7 +92,7 @@ myAutossh.kill();
 **Example 2**
 
 ``` javascript
-const myAutossh = autossh({
+autossh({
   host: '111.22.333.444',
   username: 'root',
   localPort: 64444,
