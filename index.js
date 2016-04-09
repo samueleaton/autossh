@@ -50,7 +50,7 @@ var AutoSSH = function (_EventEmitter) {
       });
 
       var port = _this.localPort === 'auto' ? _this.generateRandomPort() : _this.localPort;
-      console.log('checkpoint 1');
+
       _portfinder2.default.getPort({ port: port }, function (err, freePort) {
         if (err) return _this.emit('error', 'Port error: ' + err);
         if (_this.localPort !== 'auto' && _this.localPort !== freePort) return _this.emit('error', 'Port ' + _this.localPort + ' is not available');

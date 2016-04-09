@@ -2,11 +2,11 @@
 const autossh = require('./index.js');
 
 // open 5 ssh tunnels
-for (let i = 0; i < 5; i++) {
+// for (let i = 0; i < 5; i++) {
 
   // set up config
   autossh({
-    host: 'xyz.xy.xyz.yz', // enter host address
+    host: '192.241.216.152', // enter host address
     username: 'same', // enter username
     localPort: 'auto', // 'auto' or port number
     remotePort: 5432
@@ -23,7 +23,7 @@ for (let i = 0; i < 5; i++) {
     console.log(`tunnel established from localhost:${connection.localPort} to ${connection.host}:${connection.remotePort} as ${connection.username}`);
   });
 
-}
+// }
 
 /* Possible output example (localPort results are be random)
 

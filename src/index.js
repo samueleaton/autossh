@@ -24,7 +24,7 @@ class AutoSSH extends EventEmitter {
         return confErrors.forEach(err => this.emit('error', err));
 
       const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
-      console.log('checkpoint 1');
+
       portfinder.getPort({ port }, (err, freePort) => {
         if (err)
           return this.emit('error', 'Port error: ' + err);
