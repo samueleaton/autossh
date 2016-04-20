@@ -5,6 +5,8 @@ import portfinder from 'portfinder';
 /* AutoSSH class
 */
 class AutoSSH extends EventEmitter {
+  /*
+  */
   constructor(conf = {}) {
     super();
 
@@ -14,7 +16,7 @@ class AutoSSH extends EventEmitter {
     this.localPort = conf.localPort || 'auto';
     
     this.pollCount = 0;
-    this.maxPollCount = 25;
+    this.maxPollCount = 30;
     this.pollTimeout = 50;
 
     setImmediate(() => {
@@ -23,29 +25,7 @@ class AutoSSH extends EventEmitter {
       if (confErrors.length)
         return confErrors.forEach(err => this.emit('error', err));
 
-      const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
-
-      portfinder.getPort({ port }, (err, freePort) => {
-        if (err)
-          return this.emit('error', 'Port error: ' + err);
-        if (this.localPort !== 'auto' && this.localPort !== freePort)
-          return this.emit('error', `Port ${this.localPort} is not available`);
-
-        this.localPort = freePort;
-
-        this.execTunnel(() => {
-          this.pollConnection(() => {
-            this.emit('connect', {
-              kill: this.kill,
-              pid: this.currentProcess.pid,
-              host: this.host,
-              username: this.username,
-              remotePort: this.remotePort,
-              localPort: this.localPort
-            });
-          });
-        });
-      });
+      this.connect(conf);
     });
 
     process.on('exit', () => {
@@ -53,7 +33,43 @@ class AutoSSH extends EventEmitter {
     });
   }
 
-  pollConnection(cb) {
+  /*
+  */
+  connect(conf) {
+    const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
+
+    portfinder.getPort({ port }, (err, freePort) => {
+      if (err)
+        return this.emit('error', 'Port error: ' + err);
+      if (this.localPort !== 'auto' && this.localPort !== freePort)
+        return this.emit('error', `Port ${this.localPort} is not available`);
+
+      this.localPort = freePort;
+
+      // creates tunnel and then polls port until connection is established
+      this.execTunnel(() => {
+        this.pollConnection();
+      });
+
+    });
+  }
+
+  /* fired when connection established
+  */
+  emitConnect() {
+    this.emit('connect', {
+      kill: this.kill,
+      pid: this.currentProcess.pid,
+      host: this.host,
+      username: this.username,
+      remotePort: this.remotePort,
+      localPort: this.localPort
+    });
+  }
+
+  /* starts polling the port to see if connection established
+  */
+  pollConnection() {
     if (this.pollCount >= this.maxPollCount) {
       this.emit('error', 'Max poll count reached. Aborting...');
       return this.kill();
@@ -61,14 +77,16 @@ class AutoSSH extends EventEmitter {
 
     this.isConnectionEstablished(result => {
       if (result)
-        return cb();
+        return this.emitConnect();
       setTimeout(() => {
         this.pollCount++;
-        this.pollConnection(cb);
+        this.pollConnection();
       }, this.pollTimeout);
     });
   }
 
+  /* checks if connection is established at port
+  */
   isConnectionEstablished(cb) {
     portfinder.getPort({ port: this.localPort }, (err, freePort) => {
       if (err)
@@ -81,8 +99,11 @@ class AutoSSH extends EventEmitter {
     });
   }
 
+  /* parses the conf for errors
+  */
   getConfErrors(conf) {
     const errors = [];
+
     if (!conf.localPort)
       errors.push('Missing localPort');
     else if (typeof conf.localPort !== 'number' && conf.localPort !== 'auto')
@@ -106,12 +127,16 @@ class AutoSSH extends EventEmitter {
     return errors;
   }
 
+  /*
+  */
   generateRandomPort() {
     const minPort = 3000;
     const maxPort = 65535;
     return Math.floor(Math.random() * (maxPort - minPort + 1)) + minPort;
   }
 
+  /*
+  */
   generateExecString() {
     const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
     const userAtHost = `${this.username}@${this.host}`;
@@ -119,6 +144,8 @@ class AutoSSH extends EventEmitter {
     return `ssh -NL ${bindAddress} ${exitOnFailure} ${userAtHost}`;
   }
 
+  /* 
+  */
   execTunnel(cb) {
     this.currentProcess = exec(this.generateExecString(), (err, stdout, stderr) => {
       if (/Address already in use/i.test(stderr)) {
@@ -137,6 +164,8 @@ class AutoSSH extends EventEmitter {
       setImmediate(() => cb());
   }
 
+  /*
+  */
   kill() {
     this.killed = true;
     if (this.currentProcess && typeof this.currentProcess.kill === 'function')

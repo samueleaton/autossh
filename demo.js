@@ -6,8 +6,8 @@ const autossh = require('./index.js');
 
   // set up config
   autossh({
-    host: '192.241.216.152', // enter host address
-    username: 'same', // enter username
+    host: 'xyz.xy.xyz.yz', // enter host address
+    username: 'root', // enter username
     localPort: 'auto', // 'auto' or port number
     remotePort: 5432
   })
