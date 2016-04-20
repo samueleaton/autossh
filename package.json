@@ -1,6 +1,6 @@
 {
   "name": "autossh",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Persistent SSH tunnels",
   "main": "index.js",
   "scripts": {
