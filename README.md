@@ -71,7 +71,7 @@ The generated `localPort` can be accessed from the connection object as `localPo
 const myAutossh = autossh({
   host: '111.22.333.444',
   username: 'root',
-  localPort: 64444,
+  localPort: 'auto',
   remotePort: 5432
 })
 .on('connect', connection => {
