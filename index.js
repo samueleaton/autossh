@@ -42,7 +42,7 @@ var AutoSSH = function (_EventEmitter) {
     _this.localPort = conf.localPort || 'auto';
 
     _this.pollCount = 0;
-    _this.maxPollCount = 30;
+    _this.maxPollCount = conf.maxPollCount || 30;
     _this.pollTimeout = 50;
 
     setImmediate(function () {
@@ -109,7 +109,7 @@ var AutoSSH = function (_EventEmitter) {
     value: function pollConnection() {
       var _this3 = this;
 
-      if (this.pollCount >= this.maxPollCount) {
+      if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
         this.emit('error', 'Max poll count reached. Aborting...');
         return this.kill();
       }

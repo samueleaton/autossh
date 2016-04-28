@@ -16,7 +16,7 @@ class AutoSSH extends EventEmitter {
     this.localPort = conf.localPort || 'auto';
     
     this.pollCount = 0;
-    this.maxPollCount = 30;
+    this.maxPollCount = conf.maxPollCount || 30;
     this.pollTimeout = 50;
 
     setImmediate(() => {
@@ -70,7 +70,7 @@ class AutoSSH extends EventEmitter {
   /* starts polling the port to see if connection established
   */
   pollConnection() {
-    if (this.pollCount >= this.maxPollCount) {
+    if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
       this.emit('error', 'Max poll count reached. Aborting...');
       return this.kill();
     }
