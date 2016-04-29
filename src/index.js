@@ -14,18 +14,24 @@ class AutoSSH extends EventEmitter {
     this.username = conf.username || 'root';
     this.remotePort = conf.remotePort;
     this.localPort = conf.localPort || 'auto';
-    
+
     this.pollCount = 0;
     this.maxPollCount = conf.maxPollCount || 30;
-    this.pollTimeout = 50;
+    this.pollTimeout = 75;
+
+    this.serverAliveInterval = typeof conf.serverAliveInterval === 'number' ?
+      conf.serverAliveInterval : 120;
+
+    this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ?
+      conf.serverAliveCountMax : 1;
 
     setImmediate(() => {
       const confErrors = this.getConfErrors(conf);
-      
-      if (confErrors.length)
-        return confErrors.forEach(err => this.emit('error', err));
 
-      this.connect(conf);
+      if (confErrors.length)
+        return confErrors.forEach(confErr => this.emit('error', confErr));
+
+      return this.connect(conf);
     });
 
     process.on('exit', () => {
@@ -38,19 +44,18 @@ class AutoSSH extends EventEmitter {
   connect(conf) {
     const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
 
-    portfinder.getPort({ port }, (err, freePort) => {
-      if (err)
-        return this.emit('error', 'Port error: ' + err);
+    portfinder.getPort({ port }, (portfinderErr, freePort) => {
+      if (portfinderErr)
+        this.emit('error', 'Port error: ' + portfinderErr);
       if (this.localPort !== 'auto' && this.localPort !== freePort)
-        return this.emit('error', `Port ${this.localPort} is not available`);
-
-      this.localPort = freePort;
-
-      // creates tunnel and then polls port until connection is established
-      this.execTunnel(() => {
-        this.pollConnection();
-      });
-
+        this.emit('error', `Port ${this.localPort} is not available`);
+      else {
+        this.localPort = freePort;
+        // creates tunnel and then polls port until connection is established
+        this.execTunnel(() => {
+          this.pollConnection();
+        });
+      }
     });
   }
 
@@ -63,7 +68,8 @@ class AutoSSH extends EventEmitter {
       host: this.host,
       username: this.username,
       remotePort: this.remotePort,
-      localPort: this.localPort
+      localPort: this.localPort,
+      execString: this.execString
     });
   }
 
@@ -72,30 +78,33 @@ class AutoSSH extends EventEmitter {
   pollConnection() {
     if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
       this.emit('error', 'Max poll count reached. Aborting...');
-      return this.kill();
+      this.kill();
     }
-
-    this.isConnectionEstablished(result => {
-      if (result)
-        return this.emitConnect();
-      setTimeout(() => {
-        this.pollCount++;
-        this.pollConnection();
-      }, this.pollTimeout);
-    });
+    else {
+      this.isConnectionEstablished(result => {
+        if (result)
+          this.emitConnect();
+        else {
+          setTimeout(() => {
+            this.pollCount++;
+            this.pollConnection();
+          }, this.pollTimeout);
+        }
+      });
+    }
   }
 
   /* checks if connection is established at port
   */
-  isConnectionEstablished(cb) {
-    portfinder.getPort({ port: this.localPort }, (err, freePort) => {
-      if (err)
-        return cb(false);
-      
+  isConnectionEstablished(connEstablishedCb) {
+    portfinder.getPort({ port: this.localPort }, (portfinderErr, freePort) => {
+      if (portfinderErr)
+        return connEstablishedCb(false);
+
       if (this.localPort === freePort)
-        return cb(false);
+        return connEstablishedCb(false);
       else
-        return cb(true);
+        return connEstablishedCb(true);
     });
   }
 
@@ -108,22 +117,22 @@ class AutoSSH extends EventEmitter {
       errors.push('Missing localPort');
     else if (typeof conf.localPort !== 'number' && conf.localPort !== 'auto')
       errors.push('Invalid localPort');
-    
+
     if (!conf.host)
       errors.push('Missing host');
     else if (typeof conf.host !== 'string')
       errors.push('host must be type "string". was given ' + typeof conf.host);
-    
+
     if (!conf.username)
       errors.push('Missing username');
     else if (typeof conf.username !== 'string')
       errors.push('username must be type "string". was given ' + typeof conf.username);
-    
+
     if (!conf.remotePort)
       errors.push('Missing remotePort');
     else if (typeof conf.remotePort !== 'number')
       errors.push('remotePort must be type "number". was given ' + typeof conf.remotePort);
-    
+
     return errors;
   }
 
@@ -140,28 +149,34 @@ class AutoSSH extends EventEmitter {
   generateExecString() {
     const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
     const userAtHost = `${this.username}@${this.host}`;
-    const exitOnFailure = '-o "ExitOnForwardFailure yes"'
-    return `ssh -NL ${bindAddress} ${exitOnFailure} ${userAtHost}`;
+    const exitOnFailure = '-o "ExitOnForwardFailure yes"';
+    const serverAliveInterval = `-o ServerAliveInterval=${this.serverAliveInterval}`;
+    const serverAliveCountMax = `-o ServerAliveCountMax=${this.serverAliveCountMax}`;
+    const options = `${exitOnFailure} ${serverAliveInterval} ${serverAliveCountMax}`;
+    const execString = this.execString = `ssh -NL ${bindAddress} ${options} ${userAtHost}`;
+
+    return execString;
   }
 
-  /* 
+  /*
   */
-  execTunnel(cb) {
-    this.currentProcess = exec(this.generateExecString(), (err, stdout, stderr) => {
+  execTunnel(execTunnelCb) {
+    this.currentProcess = exec(this.generateExecString(), (execErr, stdout, stderr) => {
       if (/Address already in use/i.test(stderr)) {
         this.kill();
-        return this.emit('error', stderr);
+        this.emit('error', stderr);
+        return;
       }
 
-      if (err)
-        this.emit('error', err);
+      if (execErr)
+        this.emit('error', execErr);
 
       if (!this.killed)
         this.execTunnel(() => console.log('Restarting autossh...'));
     });
-    
-    if (typeof cb === 'function')
-      setImmediate(() => cb());
+
+    if (typeof execTunnelCb === 'function')
+      setImmediate(() => execTunnelCb());
   }
 
   /*
@@ -177,9 +192,9 @@ class AutoSSH extends EventEmitter {
 
 /* Export
 */
-module.exports = function (conf) {
+module.exports = function(conf) {
   const autossh = new AutoSSH(conf);
-  
+
   /* Create interface object
       A new object creates an abstraction from class implementation
   */
@@ -200,4 +215,4 @@ module.exports = function (conf) {
   });
 
   return autosshInterface;
-}
+};
