@@ -68,7 +68,7 @@ The major benefit is that port conflicts will automatically be avoided--the gene
 The generated `localPort` can be accessed from the connection object as `localPort`.
 
 ``` javascript
-const myAutossh = autossh({
+autossh({
   host: '111.22.333.444',
   username: 'root',
   localPort: 'auto',
@@ -134,7 +134,7 @@ The default values are `serverAliveInterval=120` (120 seconds) and `serverAliveC
 You can set these options in the object you pass to `autossh`.
 
 ``` javascript
-const myAutossh = autossh({
+autossh({
   host: '111.22.333.444',
   username: 'root',
   localPort: 'auto',
@@ -158,7 +158,7 @@ When first trying to establish the ssh tunnel, `autoshh` will poll the local por
 Set the `maxPollCount` property in the object passed to `autossh`:
 
 ```javascript
-const myAutossh = autossh({
+autossh({
   host: '111.22.333.444',
   username: 'root',
   localPort: 'auto',
@@ -175,7 +175,7 @@ const myAutossh = autossh({
 Set the `maxPollCount` property to `0` or `false` in the object passed to `autossh`:
 
 ```javascript
-const myAutossh = autossh({
+autossh({
   host: '111.22.333.444',
   username: 'root',
   localPort: 'auto',
