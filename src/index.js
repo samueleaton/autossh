@@ -150,10 +150,12 @@ class AutoSSH extends EventEmitter {
   */
   generateExecString() {
     const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
-    const exitOnFailure = '-o "ExitOnForwardFailure yes"';
+    const exitOnFailure = '-o ExitOnForwardFailure=yes';
     const serverAliveInterval = `-o ServerAliveInterval=${this.serverAliveInterval}`;
     const serverAliveCountMax = `-o ServerAliveCountMax=${this.serverAliveCountMax}`;
-    const options = `${exitOnFailure} ${serverAliveInterval} ${serverAliveCountMax}`;
+    const serverAliveOpts = `${serverAliveInterval} ${serverAliveCountMax}`;
+    const strictHostCheck = `-o StrictHostKeyChecking=no`;
+    const options = `${exitOnFailure} ${serverAliveOpts} ${strictHostCheck}`;
     const privateKey = this.privateKey ? `-i ${this.privateKey}` : '';
     const userAtHost = `${this.username}@${this.host}`;
 

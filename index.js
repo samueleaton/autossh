@@ -182,10 +182,12 @@ var AutoSSH = function (_EventEmitter) {
     key: 'generateExecString',
     value: function generateExecString() {
       var bindAddress = this.localPort + ':localhost:' + this.remotePort;
-      var exitOnFailure = '-o "ExitOnForwardFailure yes"';
+      var exitOnFailure = '-o ExitOnForwardFailure=yes';
       var serverAliveInterval = '-o ServerAliveInterval=' + this.serverAliveInterval;
       var serverAliveCountMax = '-o ServerAliveCountMax=' + this.serverAliveCountMax;
-      var options = exitOnFailure + ' ' + serverAliveInterval + ' ' + serverAliveCountMax;
+      var serverAliveOpts = serverAliveInterval + ' ' + serverAliveCountMax;
+      var strictHostCheck = '-o StrictHostKeyChecking=no';
+      var options = exitOnFailure + ' ' + serverAliveOpts + ' ' + strictHostCheck;
       var privateKey = this.privateKey ? '-i ' + this.privateKey : '';
       var userAtHost = this.username + '@' + this.host;
 
