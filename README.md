@@ -148,6 +148,28 @@ autossh({
 });
 ```
 
+#### Specifying the Private Key File
+
+Select a file from which the identity (private key) for public key authentication is read. The default is `~/.ssh/id_rsa`. 
+
+You can set the private file path as `privateKey` in the object you pass to `autossh`.
+
+```javascript
+autossh({
+  host: '111.22.333.444',
+  username: 'root',
+  localPort: 64444,
+  remotePort: 5432,
+  privateKey: '~/.ssh/github_rsa'
+})
+.on('error', err => {
+  console.error('ERROR: ', err);
+})
+.on('connect', connection => {
+  console.log('Tunnel established on port ' + connection.localPort);
+  console.log('pid: ' + connection.pid);
+});
+```
 
 #### Adjusting/Disabling Max Poll Count
 

@@ -25,6 +25,8 @@ class AutoSSH extends EventEmitter {
     this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ?
       conf.serverAliveCountMax : 1;
 
+    this.privateKey = conf.privateKey || null;
+
     setImmediate(() => {
       const confErrors = this.getConfErrors(conf);
 
@@ -148,14 +150,16 @@ class AutoSSH extends EventEmitter {
   */
   generateExecString() {
     const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
-    const userAtHost = `${this.username}@${this.host}`;
     const exitOnFailure = '-o "ExitOnForwardFailure yes"';
     const serverAliveInterval = `-o ServerAliveInterval=${this.serverAliveInterval}`;
     const serverAliveCountMax = `-o ServerAliveCountMax=${this.serverAliveCountMax}`;
     const options = `${exitOnFailure} ${serverAliveInterval} ${serverAliveCountMax}`;
-    const execString = this.execString = `ssh -NL ${bindAddress} ${options} ${userAtHost}`;
+    const privateKey = this.privateKey ? `-i ${this.privateKey}` : '';
+    const userAtHost = `${this.username}@${this.host}`;
 
-    return execString;
+    this.execString = `ssh -NL ${bindAddress} ${options} ${privateKey} ${userAtHost}`;
+
+    return this.execString;
   }
 
   /*

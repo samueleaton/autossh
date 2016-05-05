@@ -49,6 +49,8 @@ var AutoSSH = function (_EventEmitter) {
 
     _this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ? conf.serverAliveCountMax : 1;
 
+    _this.privateKey = conf.privateKey || null;
+
     setImmediate(function () {
       var confErrors = _this.getConfErrors(conf);
 
@@ -180,14 +182,16 @@ var AutoSSH = function (_EventEmitter) {
     key: 'generateExecString',
     value: function generateExecString() {
       var bindAddress = this.localPort + ':localhost:' + this.remotePort;
-      var userAtHost = this.username + '@' + this.host;
       var exitOnFailure = '-o "ExitOnForwardFailure yes"';
       var serverAliveInterval = '-o ServerAliveInterval=' + this.serverAliveInterval;
       var serverAliveCountMax = '-o ServerAliveCountMax=' + this.serverAliveCountMax;
       var options = exitOnFailure + ' ' + serverAliveInterval + ' ' + serverAliveCountMax;
-      var execString = this.execString = 'ssh -NL ' + bindAddress + ' ' + options + ' ' + userAtHost;
+      var privateKey = this.privateKey ? '-i ' + this.privateKey : '';
+      var userAtHost = this.username + '@' + this.host;
 
-      return execString;
+      this.execString = 'ssh -NL ' + bindAddress + ' ' + options + ' ' + privateKey + ' ' + userAtHost;
+
+      return this.execString;
     }
 
     /*
