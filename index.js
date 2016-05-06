@@ -49,6 +49,8 @@ var AutoSSH = function (_EventEmitter) {
 
     _this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ? conf.serverAliveCountMax : 1;
 
+    _this.sshPort = typeof conf.sshPort === 'number' ? conf.sshPort : null;
+
     _this.privateKey = conf.privateKey || null;
 
     setImmediate(function () {
@@ -179,21 +181,49 @@ var AutoSSH = function (_EventEmitter) {
     */
 
   }, {
+    key: 'generateDefaultOptions',
+    value: function generateDefaultOptions() {
+      var exitOnFailure = '-o ExitOnForwardFailure=yes';
+      var strictHostCheck = '-o StrictHostKeyChecking=no';
+      return exitOnFailure + ' ' + strictHostCheck;
+    }
+
+    /*
+    */
+
+  }, {
+    key: 'generateServerAliveOptions',
+    value: function generateServerAliveOptions() {
+      var serverAliveInterval = '-o ServerAliveInterval=' + this.serverAliveInterval;
+      var serverAliveCountMax = '-o ServerAliveCountMax=' + this.serverAliveCountMax;
+      return serverAliveInterval + ' ' + serverAliveCountMax;
+    }
+
+    /*
+    */
+
+  }, {
+    key: 'generateExecOptions',
+    value: function generateExecOptions() {
+      var serverAliveOpts = this.generateServerAliveOptions();
+      var defaultOpts = this.generateDefaultOptions();
+      var privateKey = this.privateKey ? '-i ' + this.privateKey : '';
+      var sshPort = this.sshPort ? '-p ' + this.sshPort : '';
+
+      return defaultOpts + ' ' + serverAliveOpts + ' ' + privateKey + ' ' + sshPort;
+    }
+
+    /*
+    */
+
+  }, {
     key: 'generateExecString',
     value: function generateExecString() {
       var bindAddress = this.localPort + ':localhost:' + this.remotePort;
-      var exitOnFailure = '-o ExitOnForwardFailure=yes';
-      var serverAliveInterval = '-o ServerAliveInterval=' + this.serverAliveInterval;
-      var serverAliveCountMax = '-o ServerAliveCountMax=' + this.serverAliveCountMax;
-      var serverAliveOpts = serverAliveInterval + ' ' + serverAliveCountMax;
-      var strictHostCheck = '-o StrictHostKeyChecking=no';
-      var options = exitOnFailure + ' ' + serverAliveOpts + ' ' + strictHostCheck;
-      var privateKey = this.privateKey ? '-i ' + this.privateKey : '';
+      var options = this.generateExecOptions();
       var userAtHost = this.username + '@' + this.host;
 
-      this.execString = 'ssh -NL ' + bindAddress + ' ' + options + ' ' + privateKey + ' ' + userAtHost;
-
-      return this.execString;
+      return 'ssh -NL ' + bindAddress + ' ' + options + ' ' + userAtHost;
     }
 
     /*
@@ -204,7 +234,8 @@ var AutoSSH = function (_EventEmitter) {
     value: function execTunnel(execTunnelCb) {
       var _this5 = this;
 
-      this.currentProcess = (0, _child_process.exec)(this.generateExecString(), function (execErr, stdout, stderr) {
+      this.execString = this.generateExecString();
+      this.currentProcess = (0, _child_process.exec)(this.execString, function (execErr, stdout, stderr) {
         if (/Address already in use/i.test(stderr)) {
           _this5.kill();
           _this5.emit('error', stderr);

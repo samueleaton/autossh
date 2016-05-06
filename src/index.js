@@ -25,6 +25,8 @@ class AutoSSH extends EventEmitter {
     this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ?
       conf.serverAliveCountMax : 1;
 
+    this.sshPort = typeof conf.sshPort === 'number' ? conf.sshPort : null;
+
     this.privateKey = conf.privateKey || null;
 
     setImmediate(() => {
@@ -148,26 +150,46 @@ class AutoSSH extends EventEmitter {
 
   /*
   */
-  generateExecString() {
-    const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
+  generateDefaultOptions() {
     const exitOnFailure = '-o ExitOnForwardFailure=yes';
+    const strictHostCheck = `-o StrictHostKeyChecking=no`;
+    return `${exitOnFailure} ${strictHostCheck}`;
+  }
+
+  /*
+  */
+  generateServerAliveOptions() {
     const serverAliveInterval = `-o ServerAliveInterval=${this.serverAliveInterval}`;
     const serverAliveCountMax = `-o ServerAliveCountMax=${this.serverAliveCountMax}`;
-    const serverAliveOpts = `${serverAliveInterval} ${serverAliveCountMax}`;
-    const strictHostCheck = `-o StrictHostKeyChecking=no`;
-    const options = `${exitOnFailure} ${serverAliveOpts} ${strictHostCheck}`;
+    return `${serverAliveInterval} ${serverAliveCountMax}`;
+  }
+
+  /*
+  */
+  generateExecOptions() {
+    const serverAliveOpts = this.generateServerAliveOptions();
+    const defaultOpts = this.generateDefaultOptions();
     const privateKey = this.privateKey ? `-i ${this.privateKey}` : '';
+    const sshPort = this.sshPort ? `-p ${this.sshPort}` : '';
+
+    return `${defaultOpts} ${serverAliveOpts} ${privateKey} ${sshPort}`;
+  }
+
+  /*
+  */
+  generateExecString() {
+    const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
+    const options = this.generateExecOptions();
     const userAtHost = `${this.username}@${this.host}`;
 
-    this.execString = `ssh -NL ${bindAddress} ${options} ${privateKey} ${userAtHost}`;
-
-    return this.execString;
+    return `ssh -NL ${bindAddress} ${options} ${userAtHost}`;
   }
 
   /*
   */
   execTunnel(execTunnelCb) {
-    this.currentProcess = exec(this.generateExecString(), (execErr, stdout, stderr) => {
+    this.execString = this.generateExecString();
+    this.currentProcess = exec(this.execString, (execErr, stdout, stderr) => {
       if (/Address already in use/i.test(stderr)) {
         this.kill();
         this.emit('error', stderr);

@@ -210,3 +210,17 @@ autossh({
 ```
 
 **Warning:** The max poll count is there to prevent `autossh` from infinitely polling the local port. Rather than disabling it, it may be wise to set it to a high number (e.g. `500`).
+
+#### Specifying a Different SSH Port
+
+The designated port for SSH according to the Transmission Control Protocol (TCP) is port 22, but you can specify a different port if you are using a different port. Set the `sshPort` property in the object you pass to `autossh`.
+
+```javascript
+autossh({
+  host: '111.22.333.444',
+  username: 'root',
+  localPort: 'auto',
+  remotePort: 5432,
+  sshPort: 9999
+});
+```
