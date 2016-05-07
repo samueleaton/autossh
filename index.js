@@ -80,6 +80,7 @@ var AutoSSH = function (_EventEmitter) {
       var port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
 
       _portfinder2.default.getPort({ port: port }, function (portfinderErr, freePort) {
+        if (_this2.killed) return;
         if (portfinderErr) _this2.emit('error', 'Port error: ' + portfinderErr);
         if (_this2.localPort !== 'auto' && _this2.localPort !== freePort) _this2.emit('error', 'Port ' + _this2.localPort + ' is not available');else {
           _this2.localPort = freePort;
@@ -119,6 +120,8 @@ var AutoSSH = function (_EventEmitter) {
     key: 'pollConnection',
     value: function pollConnection() {
       var _this4 = this;
+
+      if (this.killed) return;
 
       if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
         this.emit('error', 'Max poll count reached. Aborting...');
@@ -248,6 +251,8 @@ var AutoSSH = function (_EventEmitter) {
 
       this.execString = this.generateExecString();
       this.currentProcess = (0, _child_process.exec)(this.execString, function (execErr, stdout, stderr) {
+        if (_this6.killed) return;
+
         if (/Address already in use/i.test(stderr)) {
           _this6.kill();
           _this6.emit('error', stderr);

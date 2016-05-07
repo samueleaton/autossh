@@ -48,6 +48,8 @@ class AutoSSH extends EventEmitter {
     const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
 
     portfinder.getPort({ port }, (portfinderErr, freePort) => {
+      if (this.killed)
+        return;
       if (portfinderErr)
         this.emit('error', 'Port error: ' + portfinderErr);
       if (this.localPort !== 'auto' && this.localPort !== freePort)
@@ -79,6 +81,9 @@ class AutoSSH extends EventEmitter {
   /* starts polling the port to see if connection established
   */
   pollConnection() {
+    if (this.killed)
+        return;
+
     if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
       this.emit('error', 'Max poll count reached. Aborting...');
       this.kill();
@@ -203,6 +208,9 @@ class AutoSSH extends EventEmitter {
   execTunnel(execTunnelCb) {
     this.execString = this.generateExecString();
     this.currentProcess = exec(this.execString, (execErr, stdout, stderr) => {
+      if (this.killed)
+        return;
+
       if (/Address already in use/i.test(stderr)) {
         this.kill();
         this.emit('error', stderr);
