@@ -66,7 +66,7 @@ class AutoSSH extends EventEmitter {
   */
   emitConnect() {
     this.emit('connect', {
-      kill: this.kill,
+      kill: () => this.kill,
       pid: this.currentProcess.pid,
       host: this.host,
       username: this.username,

@@ -97,8 +97,12 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'emitConnect',
     value: function emitConnect() {
+      var _this3 = this;
+
       this.emit('connect', {
-        kill: this.kill,
+        kill: function kill() {
+          return _this3.kill;
+        },
         pid: this.currentProcess.pid,
         host: this.host,
         username: this.username,
@@ -114,18 +118,18 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'pollConnection',
     value: function pollConnection() {
-      var _this3 = this;
+      var _this4 = this;
 
       if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
         this.emit('error', 'Max poll count reached. Aborting...');
         this.kill();
       } else {
         this.isConnectionEstablished(function (result) {
-          if (result) _this3.emitConnect();else {
+          if (result) _this4.emitConnect();else {
             setTimeout(function () {
-              _this3.pollCount++;
-              _this3.pollConnection();
-            }, _this3.pollTimeout);
+              _this4.pollCount++;
+              _this4.pollConnection();
+            }, _this4.pollTimeout);
           }
         });
       }
@@ -137,12 +141,12 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'isConnectionEstablished',
     value: function isConnectionEstablished(connEstablishedCb) {
-      var _this4 = this;
+      var _this5 = this;
 
       _portfinder2.default.getPort({ port: this.localPort }, function (portfinderErr, freePort) {
         if (portfinderErr) return connEstablishedCb(false);
 
-        if (_this4.localPort === freePort) return connEstablishedCb(false);else return connEstablishedCb(true);
+        if (_this5.localPort === freePort) return connEstablishedCb(false);else return connEstablishedCb(true);
       });
     }
 
@@ -240,19 +244,19 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'execTunnel',
     value: function execTunnel(execTunnelCb) {
-      var _this5 = this;
+      var _this6 = this;
 
       this.execString = this.generateExecString();
       this.currentProcess = (0, _child_process.exec)(this.execString, function (execErr, stdout, stderr) {
         if (/Address already in use/i.test(stderr)) {
-          _this5.kill();
-          _this5.emit('error', stderr);
+          _this6.kill();
+          _this6.emit('error', stderr);
           return;
         }
 
-        if (execErr) _this5.emit('error', execErr);
+        if (execErr) _this6.emit('error', execErr);
 
-        if (!_this5.killed) _this5.execTunnel(function () {
+        if (!_this6.killed) _this6.execTunnel(function () {
           return console.log('Restarting autossh...');
         });
       });
