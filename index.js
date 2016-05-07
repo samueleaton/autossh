@@ -49,8 +49,7 @@ var AutoSSH = function (_EventEmitter) {
 
     _this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ? conf.serverAliveCountMax : 1;
 
-    _this.sshPort = typeof conf.sshPort === 'number' ? conf.sshPort : null;
-
+    _this.sshPort = conf.sshPort || 22;
     _this.privateKey = conf.privateKey || null;
 
     setImmediate(function () {
@@ -154,14 +153,23 @@ var AutoSSH = function (_EventEmitter) {
     key: 'getConfErrors',
     value: function getConfErrors(conf) {
       var errors = [];
+      if (!conf.localPort) errors.push('Missing localPort');else if (isNaN(parseInt(conf.localPort)) && conf.localPort !== 'auto') errors.push('Invalid localPort');
 
-      if (!conf.localPort) errors.push('Missing localPort');else if (typeof conf.localPort !== 'number' && conf.localPort !== 'auto') errors.push('Invalid localPort');
+      if (!conf.host) errors.push('Missing host');else if (typeof conf.host !== 'string') {
+        errors.push('host must be type "string". was given "' + _typeof(conf.host) + '"');
+      }
 
-      if (!conf.host) errors.push('Missing host');else if (typeof conf.host !== 'string') errors.push('host must be type "string". was given ' + _typeof(conf.host));
+      if (!conf.username) errors.push('Missing username');else if (typeof conf.username !== 'string') {
+        errors.push('username must be type "string". was given "' + _typeof(conf.username) + '"');
+      }
 
-      if (!conf.username) errors.push('Missing username');else if (typeof conf.username !== 'string') errors.push('username must be type "string". was given ' + _typeof(conf.username));
+      if (!conf.remotePort) errors.push('Missing remotePort');else if (isNaN(parseInt(conf.remotePort))) {
+        errors.push('remotePort must be type "number". was given "' + _typeof(conf.remotePort) + '"');
+      }
 
-      if (!conf.remotePort) errors.push('Missing remotePort');else if (typeof conf.remotePort !== 'number') errors.push('remotePort must be type "number". was given ' + _typeof(conf.remotePort));
+      if (conf.sshPort && isNaN(parseInt(conf.sshPort))) {
+        errors.push('sshPort must be type "number". was given "' + _typeof(conf.sshPort) + '"');
+      }
 
       return errors;
     }

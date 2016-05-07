@@ -25,8 +25,7 @@ class AutoSSH extends EventEmitter {
     this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ?
       conf.serverAliveCountMax : 1;
 
-    this.sshPort = typeof conf.sshPort === 'number' ? conf.sshPort : null;
-
+    this.sshPort = conf.sshPort || 22;
     this.privateKey = conf.privateKey || null;
 
     setImmediate(() => {
@@ -116,26 +115,40 @@ class AutoSSH extends EventEmitter {
   */
   getConfErrors(conf) {
     const errors = [];
-
     if (!conf.localPort)
       errors.push('Missing localPort');
-    else if (typeof conf.localPort !== 'number' && conf.localPort !== 'auto')
+    else if (isNaN(parseInt(conf.localPort)) && conf.localPort !== 'auto')
       errors.push('Invalid localPort');
 
     if (!conf.host)
       errors.push('Missing host');
-    else if (typeof conf.host !== 'string')
-      errors.push('host must be type "string". was given ' + typeof conf.host);
+    else if (typeof conf.host !== 'string') {
+      errors.push(
+        'host must be type "string". was given "' + typeof conf.host + '"'
+      );
+    }
 
     if (!conf.username)
       errors.push('Missing username');
-    else if (typeof conf.username !== 'string')
-      errors.push('username must be type "string". was given ' + typeof conf.username);
+    else if (typeof conf.username !== 'string') {
+      errors.push(
+        'username must be type "string". was given "' + typeof conf.username + '"'
+      );
+    }
 
     if (!conf.remotePort)
       errors.push('Missing remotePort');
-    else if (typeof conf.remotePort !== 'number')
-      errors.push('remotePort must be type "number". was given ' + typeof conf.remotePort);
+    else if (isNaN(parseInt(conf.remotePort))) {
+      errors.push(
+        'remotePort must be type "number". was given "' + typeof conf.remotePort + '"'
+      );
+    }
+
+    if (conf.sshPort && isNaN(parseInt(conf.sshPort))) {
+      errors.push(
+        'sshPort must be type "number". was given "' + typeof conf.sshPort + '"'
+      );
+    }
 
     return errors;
   }
