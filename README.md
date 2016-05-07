@@ -127,7 +127,7 @@ The `serverAliveCountMax` is a count for how many failed `serverAliveInterval` c
 
 For example, if `serverAliveInterval=10` and `serverAliveCountMax=1` then the ssh connection would be checked every 10 seconds, and if there is 1 failure, then close (and, in the case of autossh, restart) the connection. If the connection never fails, then there will be no restart.
 
-One more example, if `serverAliveInterval=5` and `serverAliveCountMax=0` then the ssh connection would be checked every 5 seconds, and if there are 0 failures, then close and restart the connection. The 0 means it doesn't care if there is a failure or not--restart every 5 seconds, regardless!.
+One more example, if `serverAliveInterval=5` and `serverAliveCountMax=0` then the ssh connection would be checked every 5 seconds, and if there are 0 failures, then close and restart the connection. The 0 means it doesn't care if there is a failure or not--close (and restart) every 5 seconds, regardless!
 
 The default values are `serverAliveInterval=120` (120 seconds) and `serverAliveCountMax=1`.
 
