@@ -7,12 +7,10 @@ const pg = require('pg').native; // install pg AND pg-native
 
 /********** CONFIG *************/
 const autosshConfig = {
-  host: parsedForm.sshHost,
-  username: parsedForm.sshUsername,
+  host: '111.222.333.444',
+  username: 'my_ssh_username',
   localPort: 'auto',
-  remotePort: parsedForm.connectionPort,
-  sshPort: parsedForm.sshPort,
-  privateKey: parsedForm.sshPrivateKey
+  remotePort: 5432
 };
 
 const pgConfig = {
@@ -20,7 +18,7 @@ const pgConfig = {
   database: 'my_database',
   password: 'my_password',
   host: 'localhost',
-  port: '5432'
+  port: 5432
 };
 
 
