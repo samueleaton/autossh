@@ -77,6 +77,20 @@ class AutoSSH extends EventEmitter {
       execString: this.execString
     });
   }
+  
+  /* fired when timeout error occurs
+  */
+  emitTimeout() {
+    this.emit('timeout', {
+      kill: () => this.kill,
+      pid: this.currentProcess.pid,
+      host: this.host,
+      username: this.username,
+      remotePort: this.remotePort,
+      localPort: this.localPort,
+      execString: this.execString
+    });
+  }
 
   /* starts polling the port to see if connection established
   */
@@ -217,8 +231,12 @@ class AutoSSH extends EventEmitter {
         return;
       }
 
-      if (execErr)
-        this.emit('error', execErr);
+      if (execErr) {
+        if ((/(timeout)|(timed out)/i).test(stderr))
+          this.emitTimeout();
+        else
+          this.emit('error', execErr);
+      }
 
       if (!this.killed)
         this.execTunnel(() => console.log('Restarting autossh...'));

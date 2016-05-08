@@ -113,13 +113,34 @@ var AutoSSH = function (_EventEmitter) {
       });
     }
 
+    /* fired when timeout error occurs
+    */
+
+  }, {
+    key: 'emitTimeout',
+    value: function emitTimeout() {
+      var _this4 = this;
+
+      this.emit('timeout', {
+        kill: function kill() {
+          return _this4.kill;
+        },
+        pid: this.currentProcess.pid,
+        host: this.host,
+        username: this.username,
+        remotePort: this.remotePort,
+        localPort: this.localPort,
+        execString: this.execString
+      });
+    }
+
     /* starts polling the port to see if connection established
     */
 
   }, {
     key: 'pollConnection',
     value: function pollConnection() {
-      var _this4 = this;
+      var _this5 = this;
 
       if (this.killed) return;
 
@@ -128,11 +149,11 @@ var AutoSSH = function (_EventEmitter) {
         this.kill();
       } else {
         this.isConnectionEstablished(function (result) {
-          if (result) _this4.emitConnect();else {
+          if (result) _this5.emitConnect();else {
             setTimeout(function () {
-              _this4.pollCount++;
-              _this4.pollConnection();
-            }, _this4.pollTimeout);
+              _this5.pollCount++;
+              _this5.pollConnection();
+            }, _this5.pollTimeout);
           }
         });
       }
@@ -144,12 +165,12 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'isConnectionEstablished',
     value: function isConnectionEstablished(connEstablishedCb) {
-      var _this5 = this;
+      var _this6 = this;
 
       _portfinder2.default.getPort({ port: this.localPort }, function (portfinderErr, freePort) {
         if (portfinderErr) return connEstablishedCb(false);
 
-        if (_this5.localPort === freePort) return connEstablishedCb(false);else return connEstablishedCb(true);
+        if (_this6.localPort === freePort) return connEstablishedCb(false);else return connEstablishedCb(true);
       });
     }
 
@@ -247,21 +268,23 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'execTunnel',
     value: function execTunnel(execTunnelCb) {
-      var _this6 = this;
+      var _this7 = this;
 
       this.execString = this.generateExecString();
       this.currentProcess = (0, _child_process.exec)(this.execString, function (execErr, stdout, stderr) {
-        if (_this6.killed) return;
+        if (_this7.killed) return;
 
         if (/Address already in use/i.test(stderr)) {
-          _this6.kill();
-          _this6.emit('error', stderr);
+          _this7.kill();
+          _this7.emit('error', stderr);
           return;
         }
 
-        if (execErr) _this6.emit('error', execErr);
+        if (execErr) {
+          if (/(timeout)|(timed out)/i.test(stderr)) _this7.emitTimeout();else _this7.emit('error', execErr);
+        }
 
-        if (!_this6.killed) _this6.execTunnel(function () {
+        if (!_this7.killed) _this7.execTunnel(function () {
           return console.log('Restarting autossh...');
         });
       });

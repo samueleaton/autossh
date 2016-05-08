@@ -31,17 +31,35 @@ autossh({
 ssh -NL 64444:localhost:5432 -o "ExitOnForwardFailure yes" -o ServerAliveInterval=120 -o ServerAliveCountMax=1 root@111.22.333.444
 ```
 
+<br />
+
 #### Event Listeners
 
-Autossh inherits from node.js's EventEmitter, and implements two events: `error`, `connect`
+Autossh inherits from node.js's EventEmitter, and implements three events: `error`, `timeout`, `connect`
 
 **error**
 
-The `error` event will fire anytime there is an error throughout the life of the `autossh` process.
+The `error` event will fire anytime there is an error throughout the life of the autossh process.
+
+**timeout**
+
+Normally, a timeout would be an error, but autossh treats it as a separate event. The `timeout` event will fire anytime there is a timeout error throughout the life of the autossh process.
+
+Autossh will automatically attempt to re-establish a connection.
 
 **connect**
 
-The `connect` event will fire only once when the initial ssh connection is made
+The `connect` event will fire only once when the initial ssh connection is made. The callback's first argument is connection object which contains the following properties:
+
+- `kill` - a method to kill autossh
+- `pid` - the autossh process id
+- `host`
+- `username`
+- `remotePort`
+- `localPort`
+- `execString` - the autossh command string
+
+**Example 1**
 
 ``` javascript
 autossh({
@@ -58,6 +76,33 @@ autossh({
   console.log('pid: ' + connection.pid);
 });
 ```
+
+**Example 2**
+
+``` javascript
+const autosshClient = autossh({
+  host: '111.22.333.444',
+  username: 'root',
+  localPort: 64444,
+  remotePort: 5432
+});
+
+autosshClient.on('error', err => {
+  console.error('ERROR: ', err);
+  autosshClient.kill();
+});
+
+autosshClient.on('timeout', connection => {
+  console.warn('Connection to ' + connection.host + ' timed out.');
+});
+
+autosshClient.on('connect', connection => {
+  console.log('Tunnel established on port ' + connection.localPort);
+  console.log('pid: ' + connection.pid);
+});
+```
+
+<br />
 
 #### Generate Dynamic Local Port
 
@@ -79,6 +124,8 @@ autossh({
   console.log('localPort: ', connection.localPort);
 });
 ```
+
+<br />
 
 #### Killing the Autossh Process
 
@@ -117,6 +164,8 @@ autossh({
 });
 ```
 
+<br />
+
 #### Adjusting `serverAliveInterval` and `serverAliveCountMax`
 
 These two options are the bread and butter butter as far as polling the ssh connection.
@@ -148,6 +197,8 @@ autossh({
 });
 ```
 
+<br />
+
 #### Specifying the Private Key File
 
 Select a file from which the identity (private key) for public key authentication is read. The default is `~/.ssh/id_rsa`. 
@@ -170,6 +221,8 @@ autossh({
   console.log('pid: ' + connection.pid);
 });
 ```
+
+<br />
 
 #### Adjusting/Disabling Max Poll Count
 
@@ -210,6 +263,8 @@ autossh({
 ```
 
 **Warning:** The max poll count is there to prevent `autossh` from infinitely polling the local port. Rather than disabling it, it may be wise to set it to a high number (e.g. `500`).
+
+<br />
 
 #### Specifying a Different SSH Port
 
