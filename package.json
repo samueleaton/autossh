@@ -4,7 +4,7 @@
   "description": "Persistent SSH tunnels",
   "main": "index.js",
   "scripts": {
-    "lint": "eslint -c .eslintrc.json src/*.js -o .eslint.log && echo '' > .eslint.log ; cat .eslint.log ",
+    "lint": "eslint -c .eslintrc.json --max-warnings 2 src/*.js -o .eslint.log && echo '' > .eslint.log ; cat .eslint.log ",
     "pretranspile": "npm run -s lint",
     "transpile": "babel src -d ."
   },

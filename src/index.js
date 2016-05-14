@@ -64,20 +64,35 @@ class AutoSSH extends EventEmitter {
     });
   }
 
+  /*
+  */
+  getConnectionInfo() {
+    const infoObj = {
+      kill: () => this.kill,
+      pid: null,
+      host: this.host || null,
+      username: this.username || null,
+      remotePort: parseInt(this.remotePort),
+      localPort: parseInt(this.localPort),
+      execString: this.execString || null
+    };
+
+    if (this.currentProcess)
+      infoObj.pid = this.currentProcess.pid;
+    if (!infoObj.localPort)
+      infoObj.localPort = null;
+    if (!infoObj.remotePort)
+      infoObj.remotePort = null;
+
+    return infoObj;
+  }
+
   /* fired when connection established
   */
   emitConnect() {
-    this.emit('connect', {
-      kill: () => this.kill,
-      pid: this.currentProcess.pid,
-      host: this.host,
-      username: this.username,
-      remotePort: this.remotePort,
-      localPort: this.localPort,
-      execString: this.execString
-    });
+    this.emit('connect', this.getConnectionInfo());
   }
-  
+
   /* fired when timeout error occurs
   */
   emitTimeout() {
@@ -96,7 +111,7 @@ class AutoSSH extends EventEmitter {
   */
   pollConnection() {
     if (this.killed)
-        return;
+      return;
 
     if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
       this.emit('error', 'Max poll count reached. Aborting...');
@@ -277,8 +292,17 @@ module.exports = function(conf) {
     }
   };
 
+  Object.defineProperty(autosshInterface, 'info', {
+    get: () => autossh.getConnectionInfo()
+  });
+
   Object.defineProperty(autosshInterface, 'pid', {
-    get: () => autossh.currentProcess.pid
+    get: () => {
+      if (autossh.currentProcess)
+        return autossh.currentProcess.pid;
+      else
+        return null;
+    }
   });
 
   return autosshInterface;
