@@ -36,21 +36,7 @@ var AutoSSH = function (_EventEmitter) {
 
     var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AutoSSH).call(this));
 
-    _this.host = conf.host;
-    _this.username = conf.username || 'root';
-    _this.remotePort = conf.remotePort;
-    _this.localPort = conf.localPort || 'auto';
-
-    _this.pollCount = 0;
-    _this.maxPollCount = conf.maxPollCount || 30;
-    _this.pollTimeout = 75;
-
-    _this.serverAliveInterval = typeof conf.serverAliveInterval === 'number' ? conf.serverAliveInterval : 120;
-
-    _this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ? conf.serverAliveCountMax : 1;
-
-    _this.sshPort = conf.sshPort || 22;
-    _this.privateKey = conf.privateKey || null;
+    _this.configure(conf);
 
     setImmediate(function () {
       var confErrors = _this.getConfErrors(conf);
@@ -68,28 +54,55 @@ var AutoSSH = function (_EventEmitter) {
     return _this;
   }
 
-  /*
-  */
-
-
   _createClass(AutoSSH, [{
+    key: 'configure',
+    value: function configure(conf) {
+      this.reverse = conf.reverse === true || false;
+
+      this.host = conf.host;
+      this.username = conf.username || 'root';
+      this.remotePort = conf.remotePort;
+
+      if (this.reverse) this.localPort = parseInt(conf.localPort) || 22;else this.localPort = conf.localPort || 'auto';
+
+      this.pollCount = 0;
+      this.maxPollCount = conf.maxPollCount || 30;
+      this.pollTimeout = 75;
+
+      this.serverAliveInterval = typeof conf.serverAliveInterval === 'number' ? conf.serverAliveInterval : 120;
+
+      this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ? conf.serverAliveCountMax : 1;
+
+      this.sshPort = conf.sshPort || 22;
+      this.privateKey = conf.privateKey || null;
+    }
+
+    /*
+    */
+
+  }, {
     key: 'connect',
     value: function connect(conf) {
       var _this2 = this;
 
       var port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
-
-      _portfinder2.default.getPort({ port: port }, function (portfinderErr, freePort) {
-        if (_this2.killed) return;
-        if (portfinderErr) _this2.emit('error', 'Port error: ' + portfinderErr);
-        if (_this2.localPort !== 'auto' && _this2.localPort !== freePort) _this2.emit('error', 'Port ' + _this2.localPort + ' is not available');else {
-          _this2.localPort = freePort;
-          // creates tunnel and then polls port until connection is established
-          _this2.execTunnel(function () {
-            _this2.pollConnection();
-          });
-        }
-      });
+      if (this.reverse) {
+        this.execTunnel(function () {
+          _this2.pollConnection();
+        });
+      } else {
+        _portfinder2.default.getPort({ port: port }, function (portfinderErr, freePort) {
+          if (_this2.killed) return;
+          if (portfinderErr) _this2.emit('error', 'Port error: ' + portfinderErr);
+          if (_this2.localPort !== 'auto' && _this2.localPort !== freePort) _this2.emit('error', 'Port ' + _this2.localPort + ' is not available');else {
+            _this2.localPort = freePort;
+            // creates tunnel and then polls port until connection is established
+            _this2.execTunnel(function () {
+              _this2.pollConnection();
+            });
+          }
+        });
+      }
     }
 
     /*
@@ -196,7 +209,8 @@ var AutoSSH = function (_EventEmitter) {
     key: 'getConfErrors',
     value: function getConfErrors(conf) {
       var errors = [];
-      if (!conf.localPort) errors.push('Missing localPort');else if (isNaN(parseInt(conf.localPort)) && conf.localPort !== 'auto') errors.push('Invalid localPort');
+      if (!conf.localPort) errors.push('Missing localPort');
+      if (conf.reverse === true && (conf.localPort === 'auto' || isNaN(parseInt(conf.localPort)))) errors.push('Invalid value for localPort');else if (isNaN(parseInt(conf.localPort)) && conf.localPort !== 'auto') errors.push('Invalid value for localPort');
 
       if (!conf.host) errors.push('Missing host');else if (typeof conf.host !== 'string') {
         errors.push('host must be type "string". was given "' + _typeof(conf.host) + '"');
@@ -259,7 +273,7 @@ var AutoSSH = function (_EventEmitter) {
       var serverAliveOpts = this.generateServerAliveOptions();
       var defaultOpts = this.generateDefaultOptions();
       var privateKey = this.privateKey ? '-i ' + this.privateKey : '';
-      var sshPort = this.sshPort ? '-p ' + this.sshPort : '';
+      var sshPort = this.sshPort === 22 ? '' : '-p ' + this.sshPort;
 
       return defaultOpts + ' ' + serverAliveOpts + ' ' + privateKey + ' ' + sshPort;
     }
@@ -270,11 +284,14 @@ var AutoSSH = function (_EventEmitter) {
   }, {
     key: 'generateExecString',
     value: function generateExecString() {
-      var bindAddress = this.localPort + ':localhost:' + this.remotePort;
+      var startPort = this.reverse ? this.remotePort : this.localPort;
+      var endPort = this.reverse ? this.localPort : this.remotePort;
+      var bindAddress = startPort + ':localhost:' + endPort;
       var options = this.generateExecOptions();
       var userAtHost = this.username + '@' + this.host;
+      var method = this.reverse ? 'R' : 'L';
 
-      return 'ssh -NL ' + bindAddress + ' ' + options + ' ' + userAtHost;
+      return 'ssh -N' + method + ' ' + bindAddress + ' ' + options + ' ' + userAtHost;
     }
 
     /*

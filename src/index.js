@@ -10,23 +10,7 @@ class AutoSSH extends EventEmitter {
   constructor(conf = {}) {
     super();
 
-    this.host = conf.host;
-    this.username = conf.username || 'root';
-    this.remotePort = conf.remotePort;
-    this.localPort = conf.localPort || 'auto';
-
-    this.pollCount = 0;
-    this.maxPollCount = conf.maxPollCount || 30;
-    this.pollTimeout = 75;
-
-    this.serverAliveInterval = typeof conf.serverAliveInterval === 'number' ?
-      conf.serverAliveInterval : 120;
-
-    this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ?
-      conf.serverAliveCountMax : 1;
-
-    this.sshPort = conf.sshPort || 22;
-    this.privateKey = conf.privateKey || null;
+    this.configure(conf);
 
     setImmediate(() => {
       const confErrors = this.getConfErrors(conf);
@@ -42,26 +26,58 @@ class AutoSSH extends EventEmitter {
     });
   }
 
+  configure(conf) {
+    this.reverse = conf.reverse === true || false;
+
+    this.host = conf.host;
+    this.username = conf.username || 'root';
+    this.remotePort = conf.remotePort;
+
+    if (this.reverse)
+      this.localPort = parseInt(conf.localPort) || 22;
+    else
+      this.localPort = conf.localPort || 'auto';
+
+    this.pollCount = 0;
+    this.maxPollCount = conf.maxPollCount || 30;
+    this.pollTimeout = 75;
+
+    this.serverAliveInterval = typeof conf.serverAliveInterval === 'number' ?
+      conf.serverAliveInterval : 120;
+
+    this.serverAliveCountMax = typeof conf.serverAliveCountMax === 'number' ?
+      conf.serverAliveCountMax : 1;
+
+    this.sshPort = conf.sshPort || 22;
+    this.privateKey = conf.privateKey || null;
+  }
+
   /*
   */
   connect(conf) {
     const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
-
-    portfinder.getPort({ port }, (portfinderErr, freePort) => {
-      if (this.killed)
-        return;
-      if (portfinderErr)
-        this.emit('error', 'Port error: ' + portfinderErr);
-      if (this.localPort !== 'auto' && this.localPort !== freePort)
-        this.emit('error', `Port ${this.localPort} is not available`);
-      else {
-        this.localPort = freePort;
-        // creates tunnel and then polls port until connection is established
-        this.execTunnel(() => {
-          this.pollConnection();
-        });
-      }
-    });
+    if (this.reverse) {
+      this.execTunnel(() => {
+        this.pollConnection();
+      });
+    }
+    else {
+      portfinder.getPort({ port }, (portfinderErr, freePort) => {
+        if (this.killed)
+          return;
+        if (portfinderErr)
+          this.emit('error', 'Port error: ' + portfinderErr);
+        if (this.localPort !== 'auto' && this.localPort !== freePort)
+          this.emit('error', `Port ${this.localPort} is not available`);
+        else {
+          this.localPort = freePort;
+          // creates tunnel and then polls port until connection is established
+          this.execTunnel(() => {
+            this.pollConnection();
+          });
+        }
+      });
+    }
   }
 
   /*
@@ -151,8 +167,10 @@ class AutoSSH extends EventEmitter {
     const errors = [];
     if (!conf.localPort)
       errors.push('Missing localPort');
+    if (conf.reverse === true && (conf.localPort === 'auto' || isNaN(parseInt(conf.localPort))))
+      errors.push('Invalid value for localPort');
     else if (isNaN(parseInt(conf.localPort)) && conf.localPort !== 'auto')
-      errors.push('Invalid localPort');
+      errors.push('Invalid value for localPort');
 
     if (!conf.host)
       errors.push('Missing host');
@@ -217,7 +235,7 @@ class AutoSSH extends EventEmitter {
     const serverAliveOpts = this.generateServerAliveOptions();
     const defaultOpts = this.generateDefaultOptions();
     const privateKey = this.privateKey ? `-i ${this.privateKey}` : '';
-    const sshPort = this.sshPort ? `-p ${this.sshPort}` : '';
+    const sshPort = this.sshPort === 22 ? '' : `-p ${this.sshPort}`;
 
     return `${defaultOpts} ${serverAliveOpts} ${privateKey} ${sshPort}`;
   }
@@ -225,11 +243,14 @@ class AutoSSH extends EventEmitter {
   /*
   */
   generateExecString() {
-    const bindAddress = `${this.localPort}:localhost:${this.remotePort}`;
+    const startPort = this.reverse ? this.remotePort : this.localPort;
+    const endPort = this.reverse ? this.localPort : this.remotePort;
+    const bindAddress = `${startPort}:localhost:${endPort}`;
     const options = this.generateExecOptions();
     const userAtHost = `${this.username}@${this.host}`;
+    const method = this.reverse ? 'R' : 'L';
 
-    return `ssh -NL ${bindAddress} ${options} ${userAtHost}`;
+    return `ssh -N${method} ${bindAddress} ${options} ${userAtHost}`;
   }
 
   /*

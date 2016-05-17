@@ -224,6 +224,30 @@ autossh({
 
 <br />
 
+#### Setting up a Reverse (Remote) Tunnel
+
+To set up a reverse tunnel set `reverse` to `true` in the config object.
+
+```javascript
+autossh({
+  host: '111.22.333.444',
+  username: 'root',
+  localPort: 22,
+  remotePort: 5432,
+  reverse: true
+})
+.on('error', err => {
+  console.error('ERROR: ', err);
+})
+.on('connect', connection => {
+  console.log('connection pid: ' + connection.pid);
+});
+```
+
+When using the reverse tunnel option, the `localPort` value cannot be `'auto'`. 
+
+<br />
+
 #### Adjusting/Disabling Max Poll Count
 
 When first trying to establish the ssh tunnel, `autoshh` will poll the local port until the connection has been established. The default max poll count is `30`.
