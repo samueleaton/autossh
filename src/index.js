@@ -27,10 +27,11 @@ class AutoSSH extends EventEmitter {
   }
 
   configure(conf) {
-    this.reverse = conf.reverse === true || false;
-
     this.host = conf.host;
-    this.localhost = conf.localHost || 'localhost';
+    this.localHost = conf.localHost || 'localhost';
+
+    this.reverse = conf.reverse === true || (this.localHost !== 'localhost');
+
     this.username = conf.username || 'root';
     this.remotePort = conf.remotePort;
 
@@ -57,7 +58,7 @@ class AutoSSH extends EventEmitter {
   */
   connect(conf) {
     const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
-    if (this.reverse) {
+    if (this.reverse || this.localHost !== 'localhost') {
       this.execTunnel(() => {
         this.pollConnection();
       });
@@ -152,6 +153,11 @@ class AutoSSH extends EventEmitter {
   /* checks if connection is established at port
   */
   isConnectionEstablished(connEstablishedCb) {
+    if (this.localHost !== 'localhost') {
+      connEstablishedCb(true);
+      return;
+    }
+
     portfinder.getPort({ port: this.localPort }, (portfinderErr, freePort) => {
       if (portfinderErr)
         return connEstablishedCb(false);
@@ -161,6 +167,8 @@ class AutoSSH extends EventEmitter {
       else
         return connEstablishedCb(true);
     });
+
+    return;
   }
 
   /* parses the conf for errors
@@ -238,8 +246,9 @@ class AutoSSH extends EventEmitter {
     const defaultOpts = this.generateDefaultOptions();
     const privateKey = this.privateKey ? `-i ${this.privateKey}` : '';
     const sshPort = this.sshPort === 22 ? '' : `-p ${this.sshPort}`;
+    const gatewayPorts = this.localHost === 'localhost' ? '' : '-o GatewayPorts=yes';
 
-    return `${defaultOpts} ${serverAliveOpts} ${privateKey} ${sshPort}`;
+    return `${defaultOpts} ${serverAliveOpts} ${gatewayPorts} ${privateKey} ${sshPort}`;
   }
 
   /*
