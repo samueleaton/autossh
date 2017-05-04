@@ -29,7 +29,6 @@ class AutoSSH extends EventEmitter {
   configure(conf) {
     this.host = conf.host;
     this.localHost = conf.localHost || 'localhost';
-
     this.reverse = conf.reverse === true || (this.localHost !== 'localhost');
 
     this.username = conf.username || 'root';
@@ -153,7 +152,7 @@ class AutoSSH extends EventEmitter {
   /* checks if connection is established at port
   */
   isConnectionEstablished(connEstablishedCb) {
-    if (this.localHost !== 'localhost') {
+    if (this.localHost !== 'localhost' || this.reverse) {
       connEstablishedCb(true);
       return;
     }

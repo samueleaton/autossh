@@ -57,7 +57,6 @@ var AutoSSH = function (_EventEmitter) {
     value: function configure(conf) {
       this.host = conf.host;
       this.localHost = conf.localHost || 'localhost';
-
       this.reverse = conf.reverse === true || this.localHost !== 'localhost';
 
       this.username = conf.username || 'root';
@@ -196,7 +195,7 @@ var AutoSSH = function (_EventEmitter) {
     value: function isConnectionEstablished(connEstablishedCb) {
       var _this6 = this;
 
-      if (this.localHost !== 'localhost') {
+      if (this.localHost !== 'localhost' || this.reverse) {
         connEstablishedCb(true);
         return;
       }
