@@ -54,6 +54,7 @@ The `connect` event will fire only once when the initial ssh connection is made.
 - `kill` - a method to kill autossh
 - `pid` - the autossh process id
 - `host`
+- `localHost` - The host, to which the tunnel applies.
 - `username`
 - `remotePort`
 - `localPort`
@@ -126,6 +127,25 @@ autossh({
 ```
 
 <br />
+
+#### Tunneling Ports from another Host
+
+It is also possible to use the tunnel as gateway to another host in the local network (for example a webcam).
+
+By default, the `localHost` property is set to `localhost`, but you can overwrite it.
+
+``` javascript
+autossh({
+  host: '111.22.333.444',
+  localhost: '192.168.1.25',
+  username: 'root',
+  localPort: '64444',
+  remotePort: 5432
+})
+.on('connect', connection => {
+  console.log('connected: ', connection);
+});
+```
 
 #### Killing the Autossh Process
 
