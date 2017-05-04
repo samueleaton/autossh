@@ -134,6 +134,8 @@ It is also possible to use the tunnel as gateway to another host in the local ne
 
 By default, the `localHost` property is set to `localhost`, but you can overwrite it.
 
+**Note that setting this property to a value different from `localhost` will make the tunnel reverse automaticly.**
+
 ``` javascript
 autossh({
   host: '111.22.333.444',
