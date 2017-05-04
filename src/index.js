@@ -30,6 +30,7 @@ class AutoSSH extends EventEmitter {
     this.reverse = conf.reverse === true || false;
 
     this.host = conf.host;
+    this.localhost = conf.localHost || 'localhost';
     this.username = conf.username || 'root';
     this.remotePort = conf.remotePort;
 
@@ -87,6 +88,7 @@ class AutoSSH extends EventEmitter {
       kill: () => this.kill,
       pid: null,
       host: this.host || null,
+      localHost: this.localHost || null,
       username: this.username || null,
       remotePort: parseInt(this.remotePort),
       localPort: parseInt(this.localPort),
@@ -245,7 +247,7 @@ class AutoSSH extends EventEmitter {
   generateExecString() {
     const startPort = this.reverse ? this.remotePort : this.localPort;
     const endPort = this.reverse ? this.localPort : this.remotePort;
-    const bindAddress = `${startPort}:localhost:${endPort}`;
+    const bindAddress = `${startPort}:${this.localHost}:${endPort}`;
     const options = this.generateExecOptions();
     const userAtHost = `${this.username}@${this.host}`;
     const method = this.reverse ? 'R' : 'L';
