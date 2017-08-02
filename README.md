@@ -290,6 +290,26 @@ autossh({
 
 <br />
 
+#### Adjusting Poll Timeout
+
+Autossh will attempt to establish a connection every *n* milliseconds until a connection is established. To increase the time between each attempt, set the `pollTimeout` option in the configuration.
+
+The following will attempt to connect every second (1000 ms) up to 50 times before giving up:
+
+```javascript
+autossh({
+  host: '111.22.333.444',
+  username: 'root',
+  localPort: 'auto',
+  remotePort: 5432,
+  maxPollCount: 50,
+  pollTimeout: 1000
+})
+.on('connect', connection => {
+  console.log('connected: ', connection);
+})
+```
+
 #### Specifying a Different SSH Port
 
 The designated port for SSH according to the Transmission Control Protocol (TCP) is port 22, but you can specify a different port if you are using a different port. Set the `sshPort` property in the object you pass to `autossh`.

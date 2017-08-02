@@ -39,8 +39,8 @@ class AutoSSH extends EventEmitter {
       this.localPort = conf.localPort || 'auto';
 
     this.pollCount = 0;
-    this.maxPollCount = conf.maxPollCount || 30;
-    this.pollTimeout = 75;
+    this.maxPollCount = parseInt(conf.maxPollCount) || 30;
+    this.pollTimeout = parseInt(conf.pollTimeout) || 75;
 
     this.serverAliveInterval = typeof conf.serverAliveInterval === 'number' ?
       conf.serverAliveInterval : 120;

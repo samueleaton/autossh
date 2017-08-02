@@ -1,6 +1,6 @@
 'use strict';
 
-var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol ? "symbol" : typeof obj; };
+var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
 
 var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 
@@ -22,19 +22,17 @@ function _inherits(subClass, superClass) { if (typeof superClass !== "function" 
 
 /* AutoSSH class
 */
-
 var AutoSSH = function (_EventEmitter) {
   _inherits(AutoSSH, _EventEmitter);
 
   /*
   */
-
   function AutoSSH() {
-    var conf = arguments.length <= 0 || arguments[0] === undefined ? {} : arguments[0];
+    var conf = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
     _classCallCheck(this, AutoSSH);
 
-    var _this = _possibleConstructorReturn(this, Object.getPrototypeOf(AutoSSH).call(this));
+    var _this = _possibleConstructorReturn(this, (AutoSSH.__proto__ || Object.getPrototypeOf(AutoSSH)).call(this));
 
     _this.configure(conf);
 
@@ -66,8 +64,8 @@ var AutoSSH = function (_EventEmitter) {
       if (this.reverse) this.localPort = parseInt(conf.localPort) || 22;else this.localPort = conf.localPort || 'auto';
 
       this.pollCount = 0;
-      this.maxPollCount = conf.maxPollCount || 30;
-      this.pollTimeout = 75;
+      this.maxPollCount = parseInt(conf.maxPollCount) || 30;
+      this.pollTimeout = parseInt(conf.pollTimeout) || 75;
 
       this.serverAliveInterval = typeof conf.serverAliveInterval === 'number' ? conf.serverAliveInterval : 120;
 
