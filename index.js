@@ -55,9 +55,10 @@ var AutoSSH = function (_EventEmitter) {
   _createClass(AutoSSH, [{
     key: 'configure',
     value: function configure(conf) {
-      this.reverse = conf.reverse === true || false;
-
       this.host = conf.host;
+      this.localHost = conf.localHost || 'localhost';
+      this.reverse = conf.reverse === true || this.localHost !== 'localhost';
+
       this.username = conf.username || 'root';
       this.remotePort = conf.remotePort;
 
@@ -84,7 +85,7 @@ var AutoSSH = function (_EventEmitter) {
       var _this2 = this;
 
       var port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
-      if (this.reverse) {
+      if (this.reverse || this.localHost !== 'localhost') {
         this.execTunnel(function () {
           _this2.pollConnection();
         });
@@ -117,6 +118,7 @@ var AutoSSH = function (_EventEmitter) {
         },
         pid: null,
         host: this.host || null,
+        localHost: this.localHost || null,
         username: this.username || null,
         remotePort: parseInt(this.remotePort),
         localPort: parseInt(this.localPort),
@@ -193,11 +195,18 @@ var AutoSSH = function (_EventEmitter) {
     value: function isConnectionEstablished(connEstablishedCb) {
       var _this6 = this;
 
+      if (this.localHost !== 'localhost' || this.reverse) {
+        connEstablishedCb(true);
+        return;
+      }
+
       _portfinder2.default.getPort({ port: this.localPort }, function (portfinderErr, freePort) {
         if (portfinderErr) return connEstablishedCb(false);
 
         if (_this6.localPort === freePort) return connEstablishedCb(false);else return connEstablishedCb(true);
       });
+
+      return;
     }
 
     /* parses the conf for errors
@@ -272,8 +281,9 @@ var AutoSSH = function (_EventEmitter) {
       var defaultOpts = this.generateDefaultOptions();
       var privateKey = this.privateKey ? '-i ' + this.privateKey : '';
       var sshPort = this.sshPort === 22 ? '' : '-p ' + this.sshPort;
+      var gatewayPorts = this.localHost === 'localhost' ? '' : '-o GatewayPorts=yes';
 
-      return defaultOpts + ' ' + serverAliveOpts + ' ' + privateKey + ' ' + sshPort;
+      return defaultOpts + ' ' + serverAliveOpts + ' ' + gatewayPorts + ' ' + privateKey + ' ' + sshPort;
     }
 
     /*
@@ -284,7 +294,7 @@ var AutoSSH = function (_EventEmitter) {
     value: function generateExecString() {
       var startPort = this.reverse ? this.remotePort : this.localPort;
       var endPort = this.reverse ? this.localPort : this.remotePort;
-      var bindAddress = startPort + ':localhost:' + endPort;
+      var bindAddress = startPort + ':' + this.localHost + ':' + endPort;
       var options = this.generateExecOptions();
       var userAtHost = this.username + '@' + this.host;
       var method = this.reverse ? 'R' : 'L';
