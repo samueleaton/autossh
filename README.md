@@ -149,6 +149,22 @@ autossh({
 });
 ```
 
+##### Generate Dynamic Remote Ports
+
+If the tunnel is reverse, you can set the `remotePort` to `'auto'` and autossh automaticly chooses a port for you.
+``` javascript
+autossh({
+  host: '111.22.333.444',
+  username: 'root',
+  localPort: 22,
+  remotePort: 'auto'
+})
+.on('connect', connection => {
+  console.log('connected: ', connection);
+  console.log('remotePort: ', connection.remotePort);
+});
+```
+
 #### Killing the Autossh Process
 
 The autossh process will automatically die if the node process is closed, but you can manually kill the process using `kill`.
