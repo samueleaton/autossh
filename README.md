@@ -139,7 +139,7 @@ By default, the `localHost` property is set to `localhost`, but you can overwrit
 ``` javascript
 autossh({
   host: '111.22.333.444',
-  localhost: '192.168.1.25',
+  localHost: '192.168.1.25',
   username: 'root',
   localPort: '64444',
   remotePort: 5432
