@@ -21,12 +21,12 @@ function _possibleConstructorReturn(self, call) { if (!self) { throw new Referen
 function _inherits(subClass, superClass) { if (typeof superClass !== "function" && superClass !== null) { throw new TypeError("Super expression must either be null or a function, not " + typeof superClass); } subClass.prototype = Object.create(superClass && superClass.prototype, { constructor: { value: subClass, enumerable: false, writable: true, configurable: true } }); if (superClass) Object.setPrototypeOf ? Object.setPrototypeOf(subClass, superClass) : subClass.__proto__ = superClass; }
 
 /* AutoSSH class
-*/
+ */
 var AutoSSH = function (_EventEmitter) {
   _inherits(AutoSSH, _EventEmitter);
 
   /*
-  */
+   */
   function AutoSSH() {
     var conf = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
@@ -35,7 +35,6 @@ var AutoSSH = function (_EventEmitter) {
     var _this = _possibleConstructorReturn(this, (AutoSSH.__proto__ || Object.getPrototypeOf(AutoSSH)).call(this));
 
     _this.configure(conf);
-
     setImmediate(function () {
       var confErrors = _this.getConfErrors(conf);
 
@@ -61,6 +60,7 @@ var AutoSSH = function (_EventEmitter) {
 
       this.username = conf.username || 'root';
       this.remotePort = conf.remotePort;
+      this.autoRemote = conf.remotePort === 'auto';
 
       if (this.reverse) this.localPort = parseInt(conf.localPort) || 22;else this.localPort = conf.localPort || 'auto';
 
@@ -77,7 +77,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'connect',
@@ -90,7 +90,9 @@ var AutoSSH = function (_EventEmitter) {
           _this2.pollConnection();
         });
       } else {
-        _portfinder2.default.getPort({ port: port }, function (portfinderErr, freePort) {
+        _portfinder2.default.getPort({
+          port: port
+        }, function (portfinderErr, freePort) {
           if (_this2.killed) return;
           if (portfinderErr) _this2.emit('error', 'Port error: ' + portfinderErr);
           if (_this2.localPort !== 'auto' && _this2.localPort !== freePort) _this2.emit('error', 'Port ' + _this2.localPort + ' is not available');else {
@@ -105,7 +107,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'getConnectionInfo',
@@ -133,7 +135,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* fired when connection established
-    */
+     */
 
   }, {
     key: 'emitConnect',
@@ -142,7 +144,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* fired when timeout error occurs
-    */
+     */
 
   }, {
     key: 'emitTimeout',
@@ -163,7 +165,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* starts polling the port to see if connection established
-    */
+     */
 
   }, {
     key: 'pollConnection',
@@ -188,7 +190,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* checks if connection is established at port
-    */
+     */
 
   }, {
     key: 'isConnectionEstablished',
@@ -200,7 +202,9 @@ var AutoSSH = function (_EventEmitter) {
         return;
       }
 
-      _portfinder2.default.getPort({ port: this.localPort }, function (portfinderErr, freePort) {
+      _portfinder2.default.getPort({
+        port: this.localPort
+      }, function (portfinderErr, freePort) {
         if (portfinderErr) return connEstablishedCb(false);
 
         if (_this6.localPort === freePort) return connEstablishedCb(false);else return connEstablishedCb(true);
@@ -210,7 +214,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* parses the conf for errors
-    */
+     */
 
   }, {
     key: 'getConfErrors',
@@ -227,7 +231,7 @@ var AutoSSH = function (_EventEmitter) {
         errors.push('username must be type "string". was given "' + _typeof(conf.username) + '"');
       }
 
-      if (!conf.remotePort) errors.push('Missing remotePort');else if (isNaN(parseInt(conf.remotePort))) {
+      if (!conf.remotePort) errors.push('Missing remotePort');else if (isNaN(parseInt(conf.remotePort)) && !this.reverse && this.autoRemote) {
         errors.push('remotePort must be type "number". was given "' + _typeof(conf.remotePort) + '"');
       }
 
@@ -239,7 +243,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'generateRandomPort',
@@ -250,7 +254,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'generateDefaultOptions',
@@ -261,7 +265,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'generateServerAliveOptions',
@@ -272,7 +276,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'generateExecOptions',
@@ -287,7 +291,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'generateExecString',
@@ -303,14 +307,17 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'execTunnel',
     value: function execTunnel(execTunnelCb) {
       var _this7 = this;
 
+      if (this.autoRemote) this.remotePort = this.generateRandomPort();
+
       this.execString = this.generateExecString();
+
       this.currentProcess = (0, _child_process.exec)(this.execString, function (execErr, stdout, stderr) {
         if (_this7.killed) return;
 
@@ -321,7 +328,12 @@ var AutoSSH = function (_EventEmitter) {
         }
 
         if (execErr) {
-          if (/(timeout)|(timed out)/i.test(stderr)) _this7.emitTimeout();else _this7.emit('error', execErr);
+          if (/(timeout)|(timed out)/i.test(stderr)) _this7.emitTimeout();else if (/remote port forwarding failed for listen/i.test(stderr) && _this7.autoRemote) {
+            _this7.execTunnel(function () {
+              return console.log('Trying another port...');
+            });
+            return;
+          } else _this7.emit('error', execErr);
         }
 
         if (!_this7.killed) _this7.execTunnel(function () {
@@ -335,7 +347,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-    */
+     */
 
   }, {
     key: 'kill',
@@ -350,14 +362,14 @@ var AutoSSH = function (_EventEmitter) {
 }(_events.EventEmitter);
 
 /* Export
-*/
+ */
 
 
 module.exports = function (conf) {
   var autossh = new AutoSSH(conf);
 
   /* Create interface object
-      A new object creates an abstraction from class implementation
+     A new object creates an abstraction from class implementation
   */
   var autosshInterface = {
     on: function on(evt) {

@@ -1,1 +1,9 @@
 
+[4m/home/hiro/Documents/Projects/doccam-pi/node_modules/autossh/src/index.js[24m
+   [2m32:12[22m  [33mwarning[39m  This function has too many statements (14). Maximum allowed is 12     [2mmax-statements[22m
+   [2m68:12[22m  [33mwarning[39m  Closing curly brace appears on the same line as the subsequent block  [2mbrace-style[22m
+  [2m142:12[22m  [33mwarning[39m  Closing curly brace appears on the same line as the subsequent block  [2mbrace-style[22m
+  [2m298:11[22m  [33mwarning[39m  Closing curly brace appears on the same line as the subsequent block  [2mbrace-style[22m
+
+[33m[1m✖ 4 problems (0 errors, 4 warnings)
+[22m[39m
