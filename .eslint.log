@@ -1,1 +1,27 @@
 
+[4m/home/hiro/Documents/Projects/autossh/src/index.js[24m
+   [2m28:2[22m   [33mwarning[39m  Expected indentation of 6 space characters but found 0                [2mindent[22m
+   [2m32:12[22m  [33mwarning[39m  This function has too many statements (14). Maximum allowed is 12     [2mmax-statements[22m
+   [2m68:12[22m  [33mwarning[39m  Closing curly brace appears on the same line as the subsequent block  [2mbrace-style[22m
+  [2m142:12[22m  [33mwarning[39m  Closing curly brace appears on the same line as the subsequent block  [2mbrace-style[22m
+  [2m274:5[22m   [33mwarning[39m  Expected indentation of 2 space characters but found 4                [2mindent[22m
+  [2m275:2[22m   [33mwarning[39m  Expected indentation of 6 space characters but found 0                [2mindent[22m
+  [2m276:2[22m   [33mwarning[39m  Expected indentation of 6 space characters but found 0                [2mindent[22m
+  [2m276:23[22m  [33mwarning[39m  Multiple spaces found before '&&'                                     [2mno-multi-spaces[22m
+  [2m277:7[22m   [33mwarning[39m  Expected indentation of 2 space characters but found 6                [2mindent[22m
+  [2m279:5[22m   [33mwarning[39m  Expected indentation of 6 space characters but found 4                [2mindent[22m
+  [2m282:7[22m   [33mwarning[39m  Expected indentation of 8 space characters but found 6                [2mindent[22m
+  [2m286:7[22m   [33mwarning[39m  Expected indentation of 8 space characters but found 6                [2mindent[22m
+  [2m292:7[22m   [33mwarning[39m  Expected indentation of 8 space characters but found 6                [2mindent[22m
+  [2m299:11[22m  [33mwarning[39m  Closing curly brace appears on the same line as the subsequent block  [2mbrace-style[22m
+  [2m302:2[22m   [31merror[39m    Mixed spaces and tabs                                                 [2mno-mixed-spaces-and-tabs[22m
+  [2m302:4[22m   [33mwarning[39m  Expected indentation of 8 space characters but found 0                [2mindent[22m
+  [2m302:4[22m   [33mwarning[39m  Unnecessary { after 'if' condition                                    [2mcurly[22m
+  [2m303:15[22m  [33mwarning[39m  Expected indentation of 2 space characters but found 14               [2mindent[22m
+  [2m304:2[22m   [31merror[39m    Mixed spaces and tabs                                                 [2mno-mixed-spaces-and-tabs[22m
+  [2m305:5[22m   [33mwarning[39m  Expected indentation of 6 space characters but found 4                [2mindent[22m
+  [2m307:5[22m   [33mwarning[39m  Expected indentation of 6 space characters but found 4                [2mindent[22m
+  [2m309:3[22m   [33mwarning[39m  Expected indentation of 4 space characters but found 2                [2mindent[22m
+
+[31m[1m✖ 22 problems (2 errors, 20 warnings)
+[22m[39m

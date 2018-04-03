@@ -1,17 +1,20 @@
-import { exec } from 'child_process';
-import { EventEmitter } from 'events';
+import {
+  exec
+} from 'child_process';
+import {
+  EventEmitter
+} from 'events';
 import portfinder from 'portfinder';
 
 /* AutoSSH class
-*/
+ */
 class AutoSSH extends EventEmitter {
   /*
-  */
+   */
   constructor(conf = {}) {
     super();
 
     this.configure(conf);
-
     setImmediate(() => {
       const confErrors = this.getConfErrors(conf);
 
@@ -22,7 +25,7 @@ class AutoSSH extends EventEmitter {
     });
 
     process.on('exit', () => {
-      this.kill();
+	this.kill();
     });
   }
 
@@ -33,6 +36,7 @@ class AutoSSH extends EventEmitter {
 
     this.username = conf.username || 'root';
     this.remotePort = conf.remotePort;
+    this.autoRemote = conf.remotePort === 'auto';
 
     if (this.reverse)
       this.localPort = parseInt(conf.localPort) || 22;
@@ -54,16 +58,17 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   connect(conf) {
     const port = this.localPort === 'auto' ? this.generateRandomPort() : this.localPort;
     if (this.reverse || this.localHost !== 'localhost') {
       this.execTunnel(() => {
         this.pollConnection();
       });
-    }
-    else {
-      portfinder.getPort({ port }, (portfinderErr, freePort) => {
+    } else {
+      portfinder.getPort({
+        port
+      }, (portfinderErr, freePort) => {
         if (this.killed)
           return;
         if (portfinderErr)
@@ -82,7 +87,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   getConnectionInfo() {
     const infoObj = {
       kill: () => this.kill,
@@ -106,13 +111,13 @@ class AutoSSH extends EventEmitter {
   }
 
   /* fired when connection established
-  */
+   */
   emitConnect() {
     this.emit('connect', this.getConnectionInfo());
   }
 
   /* fired when timeout error occurs
-  */
+   */
   emitTimeout() {
     this.emit('timeout', {
       kill: () => this.kill,
@@ -126,7 +131,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /* starts polling the port to see if connection established
-  */
+   */
   pollConnection() {
     if (this.killed)
       return;
@@ -134,8 +139,7 @@ class AutoSSH extends EventEmitter {
     if (this.maxPollCount && this.pollCount >= this.maxPollCount) {
       this.emit('error', 'Max poll count reached. Aborting...');
       this.kill();
-    }
-    else {
+    } else {
       this.isConnectionEstablished(result => {
         if (result)
           this.emitConnect();
@@ -150,14 +154,16 @@ class AutoSSH extends EventEmitter {
   }
 
   /* checks if connection is established at port
-  */
+   */
   isConnectionEstablished(connEstablishedCb) {
     if (this.localHost !== 'localhost' || this.reverse) {
       connEstablishedCb(true);
       return;
     }
 
-    portfinder.getPort({ port: this.localPort }, (portfinderErr, freePort) => {
+    portfinder.getPort({
+      port: this.localPort
+    }, (portfinderErr, freePort) => {
       if (portfinderErr)
         return connEstablishedCb(false);
 
@@ -171,7 +177,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /* parses the conf for errors
-  */
+   */
   getConfErrors(conf) {
     const errors = [];
     if (!conf.localPort)
@@ -199,7 +205,7 @@ class AutoSSH extends EventEmitter {
 
     if (!conf.remotePort)
       errors.push('Missing remotePort');
-    else if (isNaN(parseInt(conf.remotePort))) {
+    else if (isNaN(parseInt(conf.remotePort)) && (!this.reverse && this.autoRemote)) {
       errors.push(
         'remotePort must be type "number". was given "' + typeof conf.remotePort + '"'
       );
@@ -215,7 +221,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   generateRandomPort() {
     const minPort = 3000;
     const maxPort = 65535;
@@ -223,7 +229,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   generateDefaultOptions() {
     const exitOnFailure = '-o ExitOnForwardFailure=yes';
     const strictHostCheck = `-o StrictHostKeyChecking=no`;
@@ -231,7 +237,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   generateServerAliveOptions() {
     const serverAliveInterval = `-o ServerAliveInterval=${this.serverAliveInterval}`;
     const serverAliveCountMax = `-o ServerAliveCountMax=${this.serverAliveCountMax}`;
@@ -239,7 +245,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   generateExecOptions() {
     const serverAliveOpts = this.generateServerAliveOptions();
     const defaultOpts = this.generateDefaultOptions();
@@ -251,7 +257,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   generateExecString() {
     const startPort = this.reverse ? this.remotePort : this.localPort;
     const endPort = this.reverse ? this.localPort : this.remotePort;
@@ -264,12 +270,18 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
-  execTunnel(execTunnelCb) {
+   */
+    execTunnel(execTunnelCb) {
+	console.log(this.remotePort);
+	if (this.autoRemote  && isNaN(this.remotePort))
+      this.remotePort = this.generateRandomPort();
+
     this.execString = this.generateExecString();
-    this.currentProcess = exec(this.execString, (execErr, stdout, stderr) => {
+
+      this.currentProcess = exec(this.execString, (execErr, stdout, stderr) => {
       if (this.killed)
         return;
+
 
       if (/Address already in use/i.test(stderr)) {
         this.kill();
@@ -280,12 +292,16 @@ class AutoSSH extends EventEmitter {
       if (execErr) {
         if ((/(timeout)|(timed out)/i).test(stderr))
           this.emitTimeout();
-        else
+        else if (/remote port forwarding failed for listen/i.test(stderr) && this.autoRemote) {
+          this.execTunnel(() => console.log('Trying another port...'));
+          return;
+        } else
           this.emit('error', execErr);
       }
 
-      if (!this.killed)
-        this.execTunnel(() => console.log('Restarting autossh...'));
+	  if (!this.killed) {
+              this.execTunnel(() => console.log('Restarting autossh...'));
+	  }
     });
 
     if (typeof execTunnelCb === 'function')
@@ -293,7 +309,7 @@ class AutoSSH extends EventEmitter {
   }
 
   /*
-  */
+   */
   kill() {
     this.killed = true;
     if (this.currentProcess && typeof this.currentProcess.kill === 'function')
@@ -304,12 +320,12 @@ class AutoSSH extends EventEmitter {
 
 
 /* Export
-*/
+ */
 module.exports = function(conf) {
   const autossh = new AutoSSH(conf);
 
   /* Create interface object
-      A new object creates an abstraction from class implementation
+     A new object creates an abstraction from class implementation
   */
   const autosshInterface = {
     on(evt, ...args) {
