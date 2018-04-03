@@ -14,6 +14,8 @@ var _portfinder2 = _interopRequireDefault(_portfinder);
 
 function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
 
+function _toConsumableArray(arr) { if (Array.isArray(arr)) { for (var i = 0, arr2 = Array(arr.length); i < arr.length; i++) { arr2[i] = arr[i]; } return arr2; } else { return Array.from(arr); } }
+
 function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 
 function _possibleConstructorReturn(self, call) { if (!self) { throw new ReferenceError("this hasn't been initialised - super() hasn't been called"); } return call && (typeof call === "object" || typeof call === "function") ? call : self; }
@@ -26,7 +28,7 @@ var AutoSSH = function (_EventEmitter) {
   _inherits(AutoSSH, _EventEmitter);
 
   /*
-   */
+     */
   function AutoSSH() {
     var conf = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
@@ -74,10 +76,14 @@ var AutoSSH = function (_EventEmitter) {
 
       this.sshPort = conf.sshPort || 22;
       this.privateKey = conf.privateKey || null;
+      this.useAutossh = conf.useAutossh || false;
+
+      this.executable = (this.useAutossh ? 'autossh' : 'ssh') || '';
+      this.extraOpts = conf.extraOpts || [];
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'connect',
@@ -107,7 +113,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'getConnectionInfo',
@@ -124,7 +130,7 @@ var AutoSSH = function (_EventEmitter) {
         username: this.username || null,
         remotePort: parseInt(this.remotePort),
         localPort: parseInt(this.localPort),
-        execString: this.execString || null
+        execArgs: this.execArgs || null
       };
 
       if (this.currentProcess) infoObj.pid = this.currentProcess.pid;
@@ -135,7 +141,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* fired when connection established
-     */
+       */
 
   }, {
     key: 'emitConnect',
@@ -144,7 +150,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* fired when timeout error occurs
-     */
+       */
 
   }, {
     key: 'emitTimeout',
@@ -160,12 +166,12 @@ var AutoSSH = function (_EventEmitter) {
         username: this.username,
         remotePort: this.remotePort,
         localPort: this.localPort,
-        execString: this.execString
+        execArgs: this.execArgs
       });
     }
 
     /* starts polling the port to see if connection established
-     */
+       */
 
   }, {
     key: 'pollConnection',
@@ -190,7 +196,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* checks if connection is established at port
-     */
+       */
 
   }, {
     key: 'isConnectionEstablished',
@@ -214,7 +220,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /* parses the conf for errors
-     */
+       */
 
   }, {
     key: 'getConfErrors',
@@ -243,7 +249,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'generateRandomPort',
@@ -254,29 +260,36 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'generateDefaultOptions',
     value: function generateDefaultOptions() {
       var exitOnFailure = '-o ExitOnForwardFailure=yes';
       var strictHostCheck = '-o StrictHostKeyChecking=no';
-      return exitOnFailure + ' ' + strictHostCheck;
+      return [exitOnFailure, strictHostCheck];
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'generateServerAliveOptions',
     value: function generateServerAliveOptions() {
       var serverAliveInterval = '-o ServerAliveInterval=' + this.serverAliveInterval;
       var serverAliveCountMax = '-o ServerAliveCountMax=' + this.serverAliveCountMax;
-      return serverAliveInterval + ' ' + serverAliveCountMax;
+      return [serverAliveInterval, serverAliveCountMax];
+    }
+  }, {
+    key: 'stripEmpty',
+    value: function stripEmpty(arr) {
+      return arr.filter(function (elem) {
+        return Boolean(elem);
+      });
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'generateExecOptions',
@@ -286,16 +299,17 @@ var AutoSSH = function (_EventEmitter) {
       var privateKey = this.privateKey ? '-i ' + this.privateKey : '';
       var sshPort = this.sshPort === 22 ? '' : '-p ' + this.sshPort;
       var gatewayPorts = this.localHost === 'localhost' ? '' : '-o GatewayPorts=yes';
-
-      return defaultOpts + ' ' + serverAliveOpts + ' ' + gatewayPorts + ' ' + privateKey + ' ' + sshPort;
+      var extraOpts = this.extraOpts;
+      var autosshFlags = this.useAutossh ? ['-M 0'] : [];
+      return [].concat(autosshFlags, _toConsumableArray(defaultOpts), _toConsumableArray(serverAliveOpts), [gatewayPorts, privateKey, sshPort], _toConsumableArray(extraOpts));
     }
 
     /*
-     */
+       */
 
   }, {
-    key: 'generateExecString',
-    value: function generateExecString() {
+    key: 'generateExecArgs',
+    value: function generateExecArgs() {
       var startPort = this.reverse ? this.remotePort : this.localPort;
       var endPort = this.reverse ? this.localPort : this.remotePort;
       var bindAddress = startPort + ':' + this.localHost + ':' + endPort;
@@ -303,23 +317,22 @@ var AutoSSH = function (_EventEmitter) {
       var userAtHost = this.username + '@' + this.host;
       var method = this.reverse ? 'R' : 'L';
 
-      return 'ssh -N' + method + ' ' + bindAddress + ' ' + options + ' ' + userAtHost;
+      return this.stripEmpty([this.executable, '-N' + method, bindAddress].concat(_toConsumableArray(options), [userAtHost]));
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'execTunnel',
     value: function execTunnel(execTunnelCb) {
       var _this7 = this;
 
-      console.log(this.remotePort);
       if (this.autoRemote && isNaN(this.remotePort)) this.remotePort = this.generateRandomPort();
 
-      this.execString = this.generateExecString();
+      this.execArgs = this.generateExecArgs();
 
-      this.currentProcess = (0, _child_process.exec)(this.execString, function (execErr, stdout, stderr) {
+      this.currentProcess = (0, _child_process.execFile)('/usr/bin/env', this.execArgs, function (execErr, stdout, stderr) {
         if (_this7.killed) return;
 
         if (/Address already in use/i.test(stderr)) {
@@ -330,6 +343,7 @@ var AutoSSH = function (_EventEmitter) {
 
         if (execErr) {
           if (/(timeout)|(timed out)/i.test(stderr)) _this7.emitTimeout();else if (/remote port forwarding failed for listen/i.test(stderr) && _this7.autoRemote) {
+            _this7.remotePort = _this7.generateRandomPort();
             _this7.execTunnel(function () {
               return console.log('Trying another port...');
             });
@@ -337,11 +351,9 @@ var AutoSSH = function (_EventEmitter) {
           } else _this7.emit('error', execErr);
         }
 
-        if (!_this7.killed) {
-          _this7.execTunnel(function () {
-            return console.log('Restarting autossh...');
-          });
-        }
+        if (!_this7.killed) _this7.execTunnel(function () {
+          return console.log('Restarting autossh...');
+        });
       });
 
       if (typeof execTunnelCb === 'function') setImmediate(function () {
@@ -350,7 +362,7 @@ var AutoSSH = function (_EventEmitter) {
     }
 
     /*
-     */
+       */
 
   }, {
     key: 'kill',
@@ -372,8 +384,8 @@ module.exports = function (conf) {
   var autossh = new AutoSSH(conf);
 
   /* Create interface object
-     A new object creates an abstraction from class implementation
-  */
+       A new object creates an abstraction from class implementation
+    */
   var autosshInterface = {
     on: function on(evt) {
       for (var _len = arguments.length, args = Array(_len > 1 ? _len - 1 : 0), _key = 1; _key < _len; _key++) {

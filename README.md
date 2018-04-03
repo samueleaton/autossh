@@ -33,6 +33,16 @@ ssh -NL 64444:localhost:5432 -o "ExitOnForwardFailure yes" -o ServerAliveInterva
 
 <br />
 
+#### Using Autossh
+There is a very stable tool which is quite good at monitoring ssh
+connections. Setting the `useAutossh` option to `true` will tell
+`node-autossh` to use `autossh` instead of `ssh`. No further
+modifications of the settings are necessary as `autossh` is just a
+wrapper around `ssh` and will work with the same options.
+
+Using the native `autossh` is recommended and will result in greater
+stability.
+
 #### Event Listeners
 
 Autossh inherits from node.js's EventEmitter, and implements three events: `error`, `timeout`, `connect`
@@ -54,11 +64,13 @@ The `connect` event will fire only once when the initial ssh connection is made.
 - `kill` - a method to kill autossh
 - `pid` - the autossh process id
 - `host`
-- `localHost` - The host, to which the tunnel applies.
+- `localHost` - the host, to which the tunnel applies
 - `username`
 - `remotePort`
 - `localPort`
-- `execString` - the autossh command string
+- `useAutossh` - use autossh (see https://linux.die.net/man/1/autossh)
+- `executable` - the ssh connabd to use (it is passed to `/usr/bin/env`, **Higly Optional!**)
+- `extraOpts`  - an Array of extra options
 
 **Example 1**
 
