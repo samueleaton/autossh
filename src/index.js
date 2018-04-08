@@ -309,8 +309,6 @@ class AutoSSH extends EventEmitter {
           this.execTunnel(() => console.log('Trying another port...'));
           return;
         }
-        else
-          this.emit('error', execErr);
       }
 
       if (!this.killed)

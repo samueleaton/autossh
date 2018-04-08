@@ -348,7 +348,7 @@ var AutoSSH = function (_EventEmitter) {
               return console.log('Trying another port...');
             });
             return;
-          } else _this7.emit('error', execErr);
+          }
         }
 
         if (!_this7.killed) _this7.execTunnel(function () {
