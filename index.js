@@ -337,7 +337,7 @@ var AutoSSH = function (_EventEmitter) {
 
         if (/Address already in use/i.test(stderr)) {
           _this7.kill();
-          _this7.emit('error', stderr);
+          _this7.emit('error', stderr, true);
           return;
         }
 
@@ -348,7 +348,7 @@ var AutoSSH = function (_EventEmitter) {
               return console.log('Trying another port...');
             });
             return;
-          }
+          } else _this7.emit('error', execErr, false);
         }
 
         if (!_this7.killed) _this7.execTunnel(function () {

@@ -296,7 +296,7 @@ class AutoSSH extends EventEmitter {
 
       if (/Address already in use/i.test(stderr)) {
         this.kill();
-        this.emit('error', stderr);
+          this.emit('error', stderr, true);
         return;
       }
 
@@ -309,6 +309,8 @@ class AutoSSH extends EventEmitter {
           this.execTunnel(() => console.log('Trying another port...'));
           return;
         }
+        else
+            this.emit('error', execErr, false);
       }
 
       if (!this.killed)
