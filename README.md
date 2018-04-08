@@ -81,7 +81,7 @@ autossh({
   localPort: 64444,
   remotePort: 5432
 })
-.on('error', err => {
+.on('error', (err, killed) => {
   console.error('ERROR: ', err);
 })
 .on('connect', connection => {
@@ -100,7 +100,7 @@ const autosshClient = autossh({
   remotePort: 5432
 });
 
-autosshClient.on('error', err => {
+autosshClient.on('error', (err, killed) => {
   console.error('ERROR: ', err);
   autosshClient.kill();
 });
@@ -247,7 +247,7 @@ autossh({
   remotePort: 5432,
   privateKey: '~/.ssh/github_rsa'
 })
-.on('error', err => {
+.on('error', (err, killed) => {
   console.error('ERROR: ', err);
 })
 .on('connect', connection => {
@@ -270,7 +270,7 @@ autossh({
   remotePort: 5432,
   reverse: true
 })
-.on('error', err => {
+.on('error', (err, killed) => {
   console.error('ERROR: ', err);
 })
 .on('connect', connection => {
