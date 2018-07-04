@@ -29,7 +29,9 @@ class AutoSSH extends EventEmitter {
   configure(conf) {
     this.host = conf.host;
     this.localHost = conf.localHost || 'localhost';
-    this.reverse = conf.reverse === true || (this.localHost !== 'localhost');
+    this.reverse = conf.reverse === true || (
+      this.localHost !== 'localhost' && conf.reverse !== false
+    );
 
     this.username = conf.username || 'root';
     this.remotePort = conf.remotePort;
